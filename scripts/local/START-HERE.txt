@@ -1,0 +1,43 @@
+WAR CHEST — LOCAL PLAY BUILD
+
+Double-click Play War Chest.command to continue your campaign.
+Double-click Practice War Chest.command for a fresh session that never reads
+or writes your campaign save or settings. Practice progress is not saved.
+
+Keep this whole folder together. The runtime and both Banner & Steel artwork
+images are included. No editor, export templates, downloads or account needed.
+This local bundle uses the existing Godot editor binary as a game runner;
+it is not a separately exported, signed or notarized War Chest application.
+
+HOW TO PLAY
+Click a hero (or press 1–5), choose a card, then click a target.
+Space: end turn. Z: undo your last order. T/F: preview/confirm a target.
+The first battle teaches commands and awards a storm rune. Pack it beside a
+weapon, then test its +2 command damage in battle two. Guided opening introduces
+side quests/contracts/banners afterward; Explore without guidance opens them
+at their existing level/story requirements. Old saves retain existing access.
+Pack equipment before battle; stored items have no effect.
+Earn gold in battles, recruit Merrin and upgrade gear. No real purchases.
+Menu contains help, sound and reduced-motion settings.
+
+SAVES
+Campaign uses the existing location:
+~/Library/Application Support/Godot/app_userdata/War Chest/iron-and-ember-v2.json
+No save is included in this bundle. Existing malformed saves are preserved;
+the game reports that saving is disabled instead of replacing them.
+
+DIAGNOSTICS
+Verify Local Game.command checks bundle hashes, the earned twelve-encounter
+journey, native control logic, onboarding and motion logic without player data.
+Any engine error makes verification fail, even when gameplay assertions pass.
+Logs are kept in this folder's logs directory, one folder per session.
+
+Native window rendering and the reported background crash have NOT been
+requalified by this build. Headless checks do not prove graphical stability.
+If a macOS security warning appears, do not disable security protections.
+Do not delete your save to troubleshoot a launch failure.
+
+The restricted build host could not validate the installed runtime's macOS
+signature. The copied executable matches both the installed executable and
+the retained download byte-for-byte. This is not a successful Gatekeeper or
+notarization check; a clean native launch still needs confirmation.
