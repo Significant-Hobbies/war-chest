@@ -2,6 +2,7 @@
 """Validate the public War Chest landing's approved screenshot assets."""
 from __future__ import annotations
 
+import hashlib
 import struct
 import os
 import sys
@@ -11,6 +12,10 @@ from pathlib import Path
 
 ROOT = Path(os.environ.get("WAR_CHEST_LANDING_ROOT", Path(__file__).resolve().parents[1]))
 EXPECTED = ["images/battle-1440.png", "images/chest-1440.png"]
+APPROVED_SHA256 = {
+    "images/battle-1440.png": "ffd2d258227eb6e07ec87fc855f140d4ac1619d0f03aaf17288290b4bb3bd0fc",
+    "images/chest-1440.png": "7f69677ac28486f6b6b936baa6ec5b2589c023381d713477a25381462cd9d3be",
+}
 
 
 class LandingParser(HTMLParser):
@@ -64,7 +69,10 @@ def main() -> int:
     for image, relative in zip(parser.images, EXPECTED):
         if image.get("width") != "1440" or image.get("height") != "900" or not image.get("alt"):
             raise ValueError(f"{relative} needs intrinsic 1440x900 dimensions and useful alt text")
-        if png_size(ROOT / "site" / relative) != (1440, 900):
+        path = ROOT / "site" / relative
+        if hashlib.sha256(path.read_bytes()).hexdigest() != APPROVED_SHA256[relative]:
+            raise ValueError(f"{relative} does not match the reviewed screenshot provenance")
+        if png_size(path) != (1440, 900):
             raise ValueError(f"{relative} is not the approved 1440x900 source size")
     html = (ROOT / "site/index.html").read_text()
     if "width:100%; height:auto" not in html:

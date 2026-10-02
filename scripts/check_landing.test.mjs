@@ -28,6 +28,7 @@ test('rejects a landing whose intrinsic screenshot dimensions regress', () => {
   const fixtureRoot = mkdtempSync(join(tmpdir(), 'war-chest-landing-'));
   mkdirSync(join(fixtureRoot, 'site/images'), { recursive: true });
   copyFileSync(join(root, 'ASSETS.md'), join(fixtureRoot, 'ASSETS.md'));
+  copyFileSync(join(root, 'site/index.html'), join(fixtureRoot, 'site/index.html'));
   for (const name of ['battle-1440.png', 'chest-1440.png']) {
     copyFileSync(join(root, `site/images/${name}`), join(fixtureRoot, `site/images/${name}`));
   }
@@ -38,4 +39,23 @@ test('rejects a landing whose intrinsic screenshot dimensions regress', () => {
   assert.equal(result.error, undefined, result.error?.message);
   assert.notEqual(result.status, 0, 'invalid intrinsic dimensions must fail the check');
   assert.match(result.stderr, /intrinsic 1440x900 dimensions/u);
+});
+
+test('rejects screenshot bytes that no longer match the reviewed native captures', () => {
+  const fixtureRoot = mkdtempSync(join(tmpdir(), 'war-chest-landing-'));
+  mkdirSync(join(fixtureRoot, 'site/images'), { recursive: true });
+  copyFileSync(join(root, 'ASSETS.md'), join(fixtureRoot, 'ASSETS.md'));
+  copyFileSync(join(root, 'site/index.html'), join(fixtureRoot, 'site/index.html'));
+  for (const name of ['battle-1440.png', 'chest-1440.png']) {
+    copyFileSync(join(root, `site/images/${name}`), join(fixtureRoot, `site/images/${name}`));
+  }
+  const screenshot = join(fixtureRoot, 'site/images/battle-1440.png');
+  const bytes = readFileSync(screenshot);
+  bytes[bytes.length - 1] ^= 1;
+  writeFileSync(screenshot, bytes);
+
+  const result = runValidator(fixtureRoot);
+  assert.equal(result.error, undefined, result.error?.message);
+  assert.notEqual(result.status, 0, 'unreviewed screenshot bytes must fail the check');
+  assert.match(result.stderr, /does not match the reviewed screenshot provenance/u);
 });
