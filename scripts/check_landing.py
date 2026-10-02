@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import struct
+import os
 import sys
 import zlib
 from html.parser import HTMLParser
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(os.environ.get("WAR_CHEST_LANDING_ROOT", Path(__file__).resolve().parents[1]))
 EXPECTED = ["images/battle-1440.png", "images/chest-1440.png"]
 
 
