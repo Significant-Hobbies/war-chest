@@ -1,5 +1,11 @@
 # Asset provenance
 
+## Landing screenshots — October 2, 2026
+
+`site/images/battle-1440.png` and `site/images/chest-1440.png` are unchanged copies of the inspected, approved Banner & Steel native renderer captures at `/tmp/fleet-visual-20261002/war-chest/native/battle-1440.png` and `/tmp/fleet-visual-20261002/war-chest/native/chest-1440.png`. Both are 1440×900 PNGs from the e94dae4 visual audit; capture provenance and limitations are recorded in `/tmp/fleet-visual-20261002/war-chest/report.json`. They replace the rejected Pocket Siege landing evidence for issue #3 without changing the landing design.
+
+These are synthetic practice fixtures captured by the native Godot OpenGL renderer, not generated concepts, personal saves, or evidence of a published build. No new rendering or media generation was performed for this replacement. The scenery and company artwork use the generated Banner & Steel assets documented below; controls and equipment cells are native. Publication scope is exactly these two source-ready landing PNGs, this provenance entry, and their intrinsic image sizing in `site/index.html`. The game remains in native development with no public build claim; this local replacement does not qualify deployment or close issue #3. Retain/copy the PNG bytes with any future source publication; do not rely on generated/runtime media restoration.
+
 ## Current Banner & Steel — September 23, 2026
 
 Owner chose refined A. `assets/banner-steel/lantern-gate.png` and `assets/banner-steel/company-atlas.png` were generated with the built-in image tool using that concept as the style reference. No game-ripped or external proprietary assets. Source outputs retained under `/Users/sarthak/.codex/generated_images/01a0c9fa-25af-79e3-9fb3-b6fe0f5edb22/`: `exec-64d76f77-85f4-4032-9070-25940941aac1.png` (scenery), `exec-e7a9fb36-67c4-4147-8868-dcf1944be84a.png` (atlas). Copied unchanged to the workspace; runtime atlas regions isolate twelve figures. Atlas alpha and crop bounds/content are checked headlessly; native composite still needs owner inspection.
