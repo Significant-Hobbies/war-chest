@@ -16,5 +16,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - name: Validate approved landing screenshots
-        run: python scripts/check_landing.py
+        run: node --test scripts/check_landing.test.mjs
