@@ -152,11 +152,16 @@ func draw_landmark():
    polygon([[127,201],[196,181],[200,206],[163,220],[191,232],[149,251]],Color("625648"))
    draw_line(Vector2(166,215),Vector2(212,197),Color("a69c80"),5,true)
   "scout":
+   # After the rescue Ivo walks beside Rowan; the High wall marks home.
    var rescued=int(state.progress)>0
-   var p=Vector2(323,228) if rescued else Vector2(1018,306)
-   if state.surface=="battle": civilian(p,0.9,Color("aa9270"))
-   if not rescued: prop_label("IVO · RESCUE",p+Vector2(-15,-50),140)
-   lantern(p+Vector2(23,-5),0.55)
+   var escorted=rescued and state.carrier_at!=Vector2.ZERO and state.surface=="battle"
+   var p=state.carrier_at+Vector2(-66,-6) if escorted else (Vector2(323,228) if rescued else Vector2(1018,306))
+   if state.surface=="battle": civilian(p,1.5 if escorted else 0.9,Color("aa9270"))
+   if not rescued: prop_label("IVO · RESCUE",p+Vector2(-15,-78),140)
+   elif escorted:
+    prop_label("IVO",p+Vector2(-18,44),44)
+    prop_label("BRING IVO HOME",Vector2(92,262),150)
+   lantern((p if not escorted else Vector2(323,228))+Vector2(23,-5),0.55)
   "convoy":
    cart(state.cart_at,1.1)
    prop_label("IVO'S CART",state.cart_at+Vector2(-59,-55 if state.cart_at.x>1200 else 58),140)

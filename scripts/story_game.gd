@@ -60,7 +60,9 @@ func advance_story() -> bool:
   if not story_node().choices.is_empty() and not s.decisions.has(story_node().id): return fail("Choose what the company will do next.")
   if not battle.is_empty() and not super.return_to_camp(): return false
   if int(s.node)==StoryData.NODES.size()-1: s.phase="ending"
-  else: s.node+=1;s.phase="intro"
+  else:
+   s.node+=1;s.phase="intro"
+   message="Next: %s. Repack gear at camp if you like, then march." % story_node().title
   s.line=0
   return true
  s.phase="complete";s.line=0
@@ -265,7 +267,7 @@ func settle_encounter(won: bool):
   battle.reward=quest.gold
   campaign.journey.completed.append(node.quest)
   if quest.relic!="": campaign.items[quest.relic]=0
-  battle.quest_reward=("%s recovered. %s" % [ITEMS[quest.relic].name,ITEMS[quest.relic].desc]) if quest.relic!="" else node.journal
+  battle.quest_reward=("%s recovered and stored. Pack it at camp: %s" % [ITEMS[quest.relic].name,ITEMS[quest.relic].desc.to_lower()]) if quest.relic!="" else node.journal
  campaign.gold+=battle.reward
  campaign.xp=mini(350,int(campaign.xp)+int(node.xp))
  battle.new_level=level() if level()>before else 0
@@ -279,7 +281,9 @@ func return_to_camp() -> bool:
  if story_active() and campaign.story.phase=="outro": return fail("Hear the company before leaving this victory. Continue the story conversation.")
  var retry=_story_battle() and battle.phase=="defeat"
  if not super.return_to_camp(): return false
- if retry: campaign.story.phase="prepare";campaign.story.line=0
+ if retry:
+  campaign.story.phase="prepare";campaign.story.line=0
+  message="Try %s again: repack if you like, then march." % story_node().title
  return true
 
 func retreat():

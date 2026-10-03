@@ -21,6 +21,7 @@ var reduced_motion=false:
   reduced_motion=value
   if value: motion.clear();queue_redraw()
 const FRONTS=[350.0,720.0,1090.0]
+const PAPER_SURFACES=["guide","shop"]
 
 func _ready():
  super()
@@ -43,6 +44,7 @@ func objective_position() -> Vector2:
 func carrier_position() -> Vector2:
  if game==null or game.battle.is_empty(): return Vector2.ZERO
  var id=game.battle.get("story",{}).get("carrier","")
+ if id=="" and game.battle.get("story",{}).get("node","")=="scout": id="rowan"
  var unit: Dictionary=game.ally(id)
  return motion.position(id,unit_position(unit,false)) if not unit.is_empty() else Vector2.ZERO
 
@@ -52,6 +54,10 @@ func _draw():
  if not crossing: draw_texture_rect(SCENERY,Rect2(0,0,1440,900),false)
  if not battle_view and not crossing:
   draw_rect(Rect2(0,0,1440,900),Color(PAPER,0.15 if story_scene else 0.94))
+ # Guide and quartermaster use ink-on-paper layouts; the dark crossing world
+ # behind them made their text unreadable, so they keep the paper backdrop.
+ if crossing and surface in PAPER_SURFACES:
+  draw_rect(Rect2(0,0,1440,900),Color(PAPER,0.94))
  if not battle_view or game==null or game.battle.is_empty(): return
  if game.has_method("hazard"):
   var threat=game.hazard()
@@ -106,7 +112,19 @@ func render_unit(u: Dictionary,enemy: bool):
   draw_ellipse(p+Vector2(0,60),43,7,Color(selection,0.2),true)
   draw_ellipse(p+Vector2(0,60),43,7,selection,false,2,true)
  if u.id==highlighted: draw_rect(Rect2(p-Vector2(53,72),Vector2(106,136)),GOLD,false,3)
+ elif is_legal_target(u.id): legal_marker(p)
  render_badge(u,enemy,p)
+
+func is_legal_target(id: String) -> bool:
+ # Rules decide legality; the field only marks what the model already allows.
+ return card!="" and card!="move" and game.battle.get("phase","")=="playing" and game.reason(selected,card,id)==""
+
+func legal_marker(p: Vector2):
+ # Dashed frame: a legal target. The hovered/previewed target keeps a solid frame.
+ # Stays inside the actor's own rectangle, clear of front labels and badges.
+ var r=Rect2(p-Vector2(53,72),Vector2(106,136))
+ var corners=[r.position,Vector2(r.end.x,r.position.y),r.end,Vector2(r.position.x,r.end.y)]
+ for i in range(4): draw_dashed_line(corners[i],corners[(i+1)%4],GOLD,2,9,true)
 
 func draw_actor(u: Dictionary,enemy: bool,p: Vector2,alpha=1.0,impact=0.0):
  var name=u.id

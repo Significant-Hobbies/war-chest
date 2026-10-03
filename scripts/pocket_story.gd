@@ -159,8 +159,8 @@ static func reward(s):
  s.text("“"+line.text+"”" if won else "The people and wages still need a way home.",Rect2(64,221,711,94),23,s.NAVY,true)
  s.panel(Rect2(48,570,747,259),Color(s.PAPER,0.94))
  s.text(node.journal if won else "Your companions, equipment and gold are kept.",Rect2(67,591,708,98),24 if not won else 22,s.NAVY,not won)
- s.panel(Rect2(823,104,569,89),Color(s.PAPER,0.96))
  if won:
+  s.panel(Rect2(823,104,569,89),Color(s.PAPER,0.96))
   s.text("+%d company gold · Company level %d/6" % [s.game.battle.reward,s.game.level()],Rect2(842,119,528,65),25,s.NAVY,true)
   var earned=s.game.battle.get("quest_reward","")
   if node.id=="gate":
@@ -177,7 +177,8 @@ static func reward(s):
    s.panel(Rect2(823,214,569,153),Color(s.PAPER,0.96))
    s.text(earned if earned!="" else "Every deployed companion gains a mastery win. Ranks at 2, 5 and 9 wins apply next battle.",Rect2(842,229,530,129),20,s.NAVY)
    if s.game.has_loot():
-    s.text("Choose the company’s banner",Rect2(824,379,559,35),24,s.PAPER,true)
+    s.panel(Rect2(823,376,569,42),Color("12272b",0.92))
+    s.text("Choose the company’s banner",Rect2(836,380,545,35),24,s.PAPER,true)
     for i in range(s.game.battle.loot.size()):
      var id=s.game.battle.loot[i];var rank=int(s.game.war().banners.get(id,0));var y=426+i*103
      s.button(s.Game.BANNERS[id].name+(" · Rank %d" % (rank+1) if rank<3 else " · Mastered: +40 gold"),Rect2(823,y,569,48),func():s.transact(func():s.game.claim_banner(id))).set_meta("focus_key","story_banner_"+id)

@@ -225,7 +225,7 @@ func show_page():
     node.grab_focus();break
  # Restoring a control's focus must not replace the latest action/error feedback.
  if page=="battle" and chosen=="move" and not game.battle.has("story"): inspect("")
- elif page=="battle" and battle_notice!="": inspect(default_detail())
+ elif page=="battle" and (battle_notice!="" or chosen!="move"): inspect(default_detail())
  if game.save_error!="":
   if compact_save_warning:
    panel(Rect2(20,864,1400,34),PAPER,10)
@@ -341,6 +341,8 @@ func start_story_battle():
  if page=="battle" and game.battle.phase=="playing":
   for b in card_buttons:
    if not b.disabled: b.grab_focus();break
+  # Keyboard focus starts on a card, but the opening instruction stays readable.
+  inspect(default_detail())
 
 func open_original_company():
  if demo or save_path!=story_save or not FileAccess.file_exists(legacy_save): return
@@ -515,7 +517,8 @@ func crossing_battle_page():
  var goals={"gate":"Keep the crossing open","ashen":"Break the roadblock","scout":"Bring Ivo home","convoy":"Escort Ivo’s supply cart","bell":"Keep the signal bell standing","relic":"Recover the archive seal","beacons":"Light all three watchfires","frost":"Defeat the marshal and his guard","citadel":"Clear the iron patrol","winter":"Hold Winterwatch","crown":"Defeat the Crown’s company","engine":"Recover and extract the pay chest"}
  var goal=goals.get(story_id,m.name)
  if story_id=="winter" and game.battle.story.decisions.get("citadel","")=="evacuate":goal="Escort Winterwatch’s families"
- text(goal,Rect2(43,73,901,43),29,PAPER,true)
+ # Leaves the panel's right side for lesson progress and Skip lessons.
+ text(goal,Rect2(43,73,740,43),29,PAPER,true)
  var objective=game.battle_brief()
  if objective!="":
   if story_id in ["ashen","frost","crown"]:objective="Clear every foe. "+objective
@@ -593,8 +596,9 @@ func crossing_battle_page():
  undo_control.add_theme_font_size_override("font_size",16)
  var lesson=coach_hint()
  if not lesson.is_empty():
-  text(lesson.heading,Rect2(25,175,640,27),17,PAPER)
-  var skip=crossing_button("Skip lessons",Rect2(690,169,142,36),func():coaching=false;save_settings();show_page())
+  var heading=text(lesson.heading,Rect2(505,38,440,26),16,GOLD)
+  heading.horizontal_alignment=HORIZONTAL_ALIGNMENT_RIGHT
+  var skip=crossing_button("Skip lessons",Rect2(803,74,142,34),func():coaching=false;save_settings();show_page())
   skip.add_theme_font_size_override("font_size",14)
  if chosen=="move":
   inspection.text="Choose a crossing. One move per companion each turn."
@@ -606,7 +610,7 @@ func crossing_battle_page():
 func crossing_order(id: String,rect: Rect2,signature: bool):
  var cost=(0 if game.free_march() else 1) if id=="move" else Game.COMMANDS[id].cost
  var error=game.move_reason(selected) if id=="move" else game.reason(selected,id)
- var b=crossing_button("%s · %d" % [SHORT[id],cost],rect,func():choose_card(id),chosen==id or (signature and id=="ward" and int(game.campaign.get("lessons",15))==0),error!="")
+ var b=crossing_button("%s · %d" % [SHORT[id],cost],rect,func():choose_card(id),chosen==id or (chosen=="" and signature and id=="ward" and int(game.campaign.get("lessons",15))==0),error!="")
  b.add_theme_font_size_override("font_size",18 if signature else 16)
  b.set_meta("focus_key","command_"+id)
  b.accessibility_name="%s · %d order%s" % [SHORT[id],cost,"" if cost==1 else "s"]
@@ -911,10 +915,21 @@ func crossing_chest_page():
  chest.selected_item.connect(func(id):gear=id;rotation_index=int(game.campaign.placements[id][2]);chest_cursor=chest.cursor;show_page())
  chest.placed.connect(func(id,x,y,r):gear=id;rotation_index=r;chest_cursor=Vector2i(x,y);game.place(id,x,y,r);persist();show_page())
  if needs_rune and gear=="cube":chest.suggested=rune_suggestions();chest.queue_redraw()
- text("+2 Cleave damage" if game.empowered("blade") else ("+2 Volley damage" if game.empowered("bow") else "Outlined cells link the rune to a weapon."),Rect2(110,741,535,29),17,GOLD)
- crossing_button("Rotate [R]",Rect2(110,785,204,40),func():chest.rotate_preview();rotation_index=chest.item_rotation)
- crossing_button("Store item",Rect2(334,785,205,40),func():game.stow(gear);persist();show_page())
- text("Drag · WASD: cursor · R: rotate · F: place",Rect2(110,837,550,22),14,PAPER)
+ var linked_text=PackedStringArray()
+ if game.empowered("blade"): linked_text.append("+2 Cleave damage")
+ if game.empowered("bow"): linked_text.append("+2 Volley damage")
+ var stored=game.campaign.items.has(gear) and not game.campaign.placements.has(gear)
+ var chest_hint=" · ".join(linked_text) if not linked_text.is_empty() else "Outlined cells link the rune to a weapon."
+ if stored and not (needs_rune and gear=="cube"):
+  var spot=first_fit(gear)
+  if spot.is_empty(): chest_hint=Game.ITEMS[gear].name+" does not fit. Store something to make room."
+  else:
+   chest.suggested=spot;chest.queue_redraw()
+   chest_hint="Outlined: where it fits. Click its top-left cell to pack."
+ text(chest_hint,Rect2(110,736,560,27),17,GOLD)
+ text("Drag · WASD: cursor · R: rotate · F: place",Rect2(110,764,550,20),14,PAPER)
+ crossing_button("Rotate [R]",Rect2(110,790,204,38),func():chest.rotate_preview();rotation_index=chest.item_rotation)
+ crossing_button("Store item",Rect2(334,790,205,38),func():game.stow(gear);persist();show_page())
  text("Choose your equipment",Rect2(778,286,580,35),26,PAPER,true)
  var columns=3 if game.campaign.items.size()>10 else 2
  var item_width=181 if columns==3 else 286
@@ -925,6 +940,16 @@ func crossing_chest_page():
   b.add_theme_font_size_override("font_size",16);i+=1
  text(Game.ITEMS[gear].name,Rect2(779,725,579,32),23,GOLD,true)
  text(GEAR_EFFECT.get(gear,Game.ITEMS[gear].desc),Rect2(779,767,579,59),18,PAPER)
+
+func first_fit(id: String) -> Array:
+ # Read-only: the model's placement rule decides; nothing is packed here.
+ for y in range(5):
+  for x in range(6):
+   if game.can_place(id,x,y,rotation_index):
+    var out=[]
+    for cell in game.cells(id,[x,y,rotation_index]): out.append(Vector2i(cell[0],cell[1]))
+    return out
+ return []
 
 func rune_suggestions() -> Array:
  var result=[]

@@ -193,6 +193,28 @@ func authored_layout(s):
     label_layout(s,"%s/ending/%s/%s" % [dimensions,decisions.citadel,line])
   await battle_chest_layout(s,dimensions)
 
+func playtest_regressions():
+ # Native playtest findings, October 3: guidance stayed hidden behind restored
+ # focus, chosen commands showed no legal targets, and rescued Ivo detached from Rowan.
+ var s=Main.new();root.add_child(s);s.muted=true;s.reduced_motion=true
+ await process_frame
+ for line in range(3): press(s,"story_continue")
+ press(s,"story_march")
+ var lesson=s.coach_hint()
+ check(not lesson.is_empty() and s.inspection.text==lesson.body,"Battle start keeps the first lesson visible despite card focus")
+ var skip=control(s,"Skip lessons")
+ check(skip!=null and skip.get_rect().end.y<=164,"Skip lessons stays inside the objective panel, clear of front labels")
+ press(s,"command_ward")
+ check(s.field.is_legal_target("rowan") and s.field.is_legal_target("lysa"),"Chosen Shield marks its legal ally targets")
+ check(not s.field.is_legal_target(s.game.battle.enemies[0].id),"Enemies are not marked as Shield targets")
+ check(s.inspection.text==s.coach_hint().body,"Choosing a card shows the target instruction, not the focused card text")
+ key(s,KEY_ESCAPE)
+ check(not s.field.is_legal_target("rowan"),"Cancelling the command clears target markers")
+ var scout=route_fixture(2,{});check(scout.begin_story_node(),"Scout fixture starts its real encounter")
+ install(s,scout,"battle")
+ check(s.field.carrier_position()==s.field.unit_position(scout.ally("rowan"),false),"Ivo's escort position follows Rowan's actual crossing position")
+ s.queue_free();await process_frame
+
 func run():
  if "--story-demo" not in OS.get_cmdline_user_args():
   push_error("Crossing story tests require --story-demo; no player files are opened.");quit(1);return
@@ -222,11 +244,14 @@ func run():
   if screen.game.campaign.story.phase not in ["outro","intro"]: break
   press(screen,"story_continue")
  check(screen.page=="chest" and screen.gear=="cube" and screen.game.story_node().id=="ashen","Complete aftermath and briefing automatically reach legal rune packing")
+ check(not screen.game.message.begins_with("Home again"),"Story camp footer names the next task, not the legacy keep message")
  key(screen,KEY_F)
  check(screen.game.empowered("blade"),"Actual packing input links the earned rune to Emberblade")
+ check(text_present(screen,"+2 Volley damage")==screen.game.empowered("bow"),"Chest payoff names every weapon the rune actually links")
  press(screen,"← Company road");press(screen,"story_march")
  check(screen.game.damage_against("rowan","cleave",screen.game.battle.enemies[0])==10,"Next actual story encounter receives the promised ten-damage Cleave")
  await recruitment(screen)
+ await playtest_regressions()
  await authored_layout(screen)
  screen.queue_free();await process_frame;await process_frame
  print("CROSSING STORY TESTS: %d checks, %d failures" % [checks,failures])
