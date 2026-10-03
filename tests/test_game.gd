@@ -28,6 +28,11 @@ func _initialize():
  expect(g.recruit(),"recruit Merrin")
  expect(g.campaign.gold==gold-60 and g.campaign.items.has("staff"),"recruit costs gold and grants staff")
  expect(not g.recruit(),"recruit cannot charge twice")
+ var prepared=Game.new()
+ prepared.campaign.xp=70
+ prepared.campaign.gold=200
+ expect(prepared.buy("staff") and prepared.upgrade("staff"),"staff can be acquired and forged before recruitment")
+ expect(prepared.recruit() and prepared.campaign.items.staff==1,"recruitment preserves an already forged staff")
  expect(g.upgrade("blade"),"forge spends earned gold")
  expect(not g.buy("ballista"),"unaffordable purchase refused")
  expect(not g.start_mission(2),"locked mission refused")
@@ -61,6 +66,15 @@ func _initialize():
  malformed=g.snapshot()
  malformed.battle.units[0].hp="oops"
  expect(not copy.restore(malformed),"bad stat type refused")
+ var intact=copy.snapshot()
+ for bad_version in [false,"1",[],{}]:
+  malformed=g.snapshot()
+  malformed.version=bad_version
+  expect(not copy.restore(malformed) and copy.snapshot()==intact,"wrong-type save version is rejected atomically")
+ for bad_placement in [null,{},[],"broken",[0,0],[0,0,"oops"]]:
+  malformed=g.snapshot()
+  malformed.campaign.placements.cube=bad_placement
+  expect(not copy.restore(malformed) and copy.snapshot()==intact,"malformed later placement is rejected atomically")
  DirAccess.make_dir_recursive_absolute("res://artifacts/test-saves")
  var path="res://artifacts/test-saves/test-save-"+str(Time.get_ticks_usec())+".json"
  expect(g.save_to(path),"isolated save written")
@@ -74,6 +88,17 @@ func _initialize():
  expect(not loaded.load_from(bad_path),"malformed save fails safely")
  expect(not loaded.save_to(bad_path),"malformed save cannot be overwritten")
  expect(FileAccess.get_file_as_string(bad_path)=="{broken","bad original preserved")
+ var malformed_path=path+"-packing"
+ malformed=g.snapshot()
+ malformed.campaign.placements.cube=null
+ var original=JSON.stringify(malformed)
+ file=FileAccess.open(malformed_path,FileAccess.WRITE)
+ file.store_string(original)
+ file.close()
+ var protected=Game.new()
+ intact=protected.snapshot()
+ expect(not protected.load_from(malformed_path) and protected.save_locked and protected.snapshot()==intact,"malformed packing locks saving without replacing campaign")
+ expect(not protected.save_to(malformed_path) and FileAccess.get_file_as_string(malformed_path)==original,"malformed packing save bytes remain unchanged")
  var pre=g.campaign.gold
  g.finish(true)
  expect(g.campaign.gold==pre+85 and g.campaign.unlocked==1,"victory rewards and unlock")

@@ -1,43 +1,66 @@
 # War Chest
 
-A personal desktop tactical RPG: command a persistent company, fit equipment into a spatial war chest, and unlock something playable at every level.
+A personal desktop story RPG: bring a valley's stolen winter wages home, command an enduring company, and fit equipment into a spatial war chest.
 
 ## Play locally
 
-**Double-click `War Chest.app` in this project folder** to play your saved campaign without opening Terminal. The self-contained app includes the same local runtime and game pack; it can be moved as a single unit to another writable local folder. Existing campaign progress uses the unchanged save location. This is an unsigned local convenience app, not a notarized release. Do not bypass macOS security warnings.
+The owner selected **A — The Last Crossing** on October 3. Current source uses an elevated world with an open gate, visible family procession, exact threat arrows, companion-linked orders and a shared camp/chest. A new Gate deployment begins with two eight-health raiders on Rowan's front; the next wave introduces the other fronts. Existing active snapshots and legacy companies keep their stored rules. The twelve-encounter story and its save slots remain intact.
 
-**Double-click `Practice War Chest.app` to try the new opening without touching your save.** Practice progress is temporary. Both apps contain Banner & Steel: mature flat illustrated troops, olive/stone scenery, three vertical approaches, restrained paper controls and a playable earned-rune introduction. Close older game windows before trying the updated apps.
+Newest isolated practice build (October 3 native playtest fixes): [Practice War Chest Playtest Fixes v2.app](<builds/Practice War Chest Playtest Fixes v2.app>). It adds readable Menu/quartermaster pages, visible lesson and target instructions, dashed legal-target frames, Ivo escorted beside Rowan, and clearer chest packing hints. Agents can drive a rendered practice session with `tests/native_playtest.gd` (see its header); it never touches player saves.
 
-Build another copy with `sh scripts/build-app.sh`; the builder refuses to replace an existing app. For a practice build, supply input folder, output app path and `practice` as its three arguments. `sh tests/test_app_launcher.sh` checks layout, campaign/practice arguments, relocation and overwrite protection using a fake engine, never your save. Finder launch of these updated wrappers still needs owner confirmation. The owner confirmed the previous Practice command opens a game window; background stability is not yet confirmed. Earlier bundles are preserved under `builds/War Chest Before Banner Steel.app` and `builds/War Chest Local Before Banner Steel/`.
+The earlier [Practice War Chest Last Crossing.app](<builds/Practice War Chest Last Crossing.app>) remains for comparison. Practice progress is temporary and does not read or write your saves or preferences. The self-contained folder is [War Chest Last Crossing 2026-10-03](<builds/War Chest Last Crossing 2026-10-03>); keep its files together. This is an unsigned local convenience build, not a notarized release.
 
-The self-contained local bundle is at `builds/War Chest Local/`:
+Current source can also run in an isolated practice session with `sh scripts/play.sh -- --story-demo`. Companion selection is free; command previews execute a disposable copy of the actual rules. The campaign road names all twelve stops, recruitment explains Merrin's stored staff, and the first earned rune teaches the actual 8-to-10 damage payoff. All 19 source suites and 14 packaged suites passed; all 40 packed resources match the checked source. Current native visual inspection is blocked in the agent session. Earlier captures below do not qualify this overhaul or prove player enjoyment. See [.fleet/last-crossing-review-2026-10-03.md](.fleet/last-crossing-review-2026-10-03.md) for verification and remaining limits.
+
+### Earlier native builds — October 2
+
+Double-click `builds/Practice War Chest Onboarding v2.app` to play the earlier authored campaign without touching your saves or preferences. Practice progress is temporary. Use `builds/War Chest Onboarding v2.app` for persistent play: resume an existing company, or begin the separate story company. Both contain their October 2 runtime and game pack and can be moved to another writable local folder. These are unsigned local convenience apps, not notarized releases.
+
+Both use the owner-selected **Company & Consequences** story presentation within Banner & Steel: visible companions, world scenes, short conversations, practical decisions and a finite three-chapter road. The updated lessons explain free portrait/number-key selection, Merrin's automatic arrival and stored staff, named company-level milestones and separate companion mastery. Project-root apps and earlier bundles are preserved; they contain older code. See [.fleet/story-onboarding-review-2026-10-02.md](.fleet/story-onboarding-review-2026-10-02.md) for current verification and [.fleet/story-mode-review-2026-10-02.md](.fleet/story-mode-review-2026-10-02.md) for the underlying story qualification.
+
+Build another copy with `sh scripts/build-app.sh`; supply the input bundle and a fresh output app path, then `practice` for an isolated story build. The builder refuses to replace an existing app. `sh tests/test_app_launcher.sh` checks campaign/practice arguments, relocation and overwrite protection using a fake engine. Source-native story input, help return, the Gate victory, rune packing and its actual Ashen damage payoff were inspected on October 2. The persistent campaign wrapper receives preflight/integrity verification and is never launched by tests. Earlier bundles and the owner's existing session remain preserved.
+
+The onboarding v2 practice app was native-launched on October 2 and left at the first battle with six orders untouched. Mouse/keyboard selection was inspected; the portrait/1–5 instruction remains visible even when a command card has focus. Its 17 source suites, 12 packaged suites and 45 native fixture captures passed then. This is historical evidence; first-time player comprehension still needs a human playtest.
+
+The self-contained current bundle is at `builds/War Chest Onboarding v2 2026-10-02/`:
 
 - Double-click `Play War Chest.command` to continue your saved campaign.
-- Double-click `Practice War Chest.command` for a fresh, temporary campaign that never reads/writes your save or settings.
-- `Verify Local Game.command` checks integrity and runs packaged journey, native-control, onboarding and motion tests. Logs stay in the bundle's `logs/` folder. Engine errors produce a failure even when assertions pass.
+- Double-click `Practice War Chest.command` for a fresh, temporary story that never reads/writes your saves or settings.
+- `Verify Local Game.command` checks integrity and runs twelve packaged suites: journey, journey UI, onboarding, motion, opening, opening startup, stability, current battle UI, story rules, earned story routes, story UI and story save slots. Logs stay in the bundle's `logs/` folder. Missing completion markers and engine errors fail verification even when the process exits successfully.
 
-The project-root Play/Practice launchers prefer this bundle when present. Keep the whole bundle together; it contains the existing Godot runtime, game pack, both Banner & Steel artwork images, engine notices and checksum manifest. It does not depend on the source checkout or Downloads path at runtime. This is a local runner, not a notarized standalone export. Native graphical/background-crash verification is still pending.
+Keep the whole bundle together; it contains the existing Godot runtime, game pack, both Banner & Steel artwork images, engine notices and checksum manifest. It does not depend on the source checkout or Downloads path at runtime. Project-root Play/Practice launchers still prefer the older `builds/War Chest Local/` bundle; use the story paths above.
 
-Rebuild with `sh scripts/build-local.sh builds/NewCandidate` to preserve the existing bundle. The builder refuses to overwrite an existing output. It includes only the current game's explicit resource closure and six isolated test scripts, never player data or previous art experiments. `sh tests/test_local_launcher.sh` tests launcher modes and failure paths without starting a game.
+Rebuild with `sh scripts/build-local.sh builds/NewCandidate` to preserve existing bundles. The builder refuses to overwrite an existing output. It includes only the current game's explicit resource closure and fourteen isolated test scripts, never player data or previous art experiments. `sh tests/test_local_launcher.sh` tests launcher modes and failure paths without starting a game.
 
 ### Run from source instead
 
-Godot 4.7.2 is downloaded at `/Users/sarthak/Downloads/war-chest-tools/Godot.app`. The project and assets are already prepared on this machine.
+The existing bundled official Godot 4.7.2 runtime works on this machine. Scripts discover an explicit `GODOT_BIN`, the earlier Downloads location, the existing `builds/War Chest Local/` runtime, then `godot`/`godot4` on PATH. An invalid explicit override fails with a diagnostic instead of silently falling back.
 
 ```sh
 cd /Users/sarthak/Desktop/fleet/war-chest
 sh scripts/play.sh
 ```
 
-Or open `project.godot` in Godot and press F5. On another machine, set `GODOT_BIN` to a Godot 4.7.x executable and separately copy `assets/banner-steel/` before importing the project. These required generated battle assets are local-only; fetch-assets.sh restores only the older prototype's external art. Legacy sprite-alpha fixtures also use the preserved `assets/pocket-v2/` images.
+Or open `project.godot` in Godot and press F5. On another machine, set `GODOT_BIN` to a Godot 4.7.x executable and separately copy `assets/banner-steel/` before importing the project. These required generated battle assets are local-only; fetch-assets.sh restores only the older prototype's external art.
 
-Battle-only practice trial (does not read or write player saves): `sh scripts/play.sh -- --pocket-battle`.
+Fresh authored-story practice (does not read or write player saves/settings): `sh scripts/play.sh -- --story-demo`.
+Battle-only legacy practice: `sh scripts/play.sh -- --pocket-battle`.
+
+## Story mode
+
+Lysa's brother is missing among families outside Lantern Gate. Rowan signed the order that shut them out. Open the gate, find Ivo, follow the stolen winter wages and bring the chest home. Twelve encounters form three chapters: **The Gate We Opened**, **Names in the Ledger**, and **What We Keep**. [STORY.md](STORY.md) contains the complete authored arc.
+
+Conversations lead to actual preparation and battles. Three choices alter the convoy, the frost marshal and Winterwatch, then return in the ending. Company levels advance after Gate, Convoy, Watchfires, Iron Oath and Winterwatch, adding 2 starting max HP to companions each time. The road names the next milestone. Other story victories still give gold and individual mastery; mastery ranks at 2/5/9 wins apply next battle. Merrin joins free after the Sunken Reliquary and deploys automatically next battle; his staff arrives in storage and must be packed for Storm. Fen stays with the company. Contracts and Talon open after the epilogue. No grinding is needed to complete either route.
+
+Rescue, escort, watchfires and seal recovery require moving living companions. In the finale Rowan can collect the chest under fire or wait for cover; departure requires every foe defeated and a survived exit turn. Killing the captain alone cannot end the story. Defeat keeps your company and returns you to the same promise. The company road includes a journal and earned banner equipment.
+
+Fresh persistent games begin in story mode. A saved original company gets **Begin story mode**, which creates a separate company; Menu can reopen the original. Story progress uses `winter-wages-story-v1.json`, preserving `iron-and-ember-v2.json`. A malformed slot is kept unchanged and never silently replaced.
 
 ## Controls
 
-- Click a hero/portrait or press **1–5** to select.
+- All companions deploy. Click a bottom portrait or press **1–5** to select whose cards you command; switching spends no orders and cancels a selected card. With no card chosen, clicking a living hero also selects them.
 - Choose a command card, then click a troop. **T** cycles legal targets; **F** confirms.
-- **Space** ends the round; **Z** undoes the last order within the current round. Rewards and enemy turns cannot be undone.
+- **Space** ends the turn; **Z** undoes the last order within the current turn. Rewards and enemy turns cannot be undone.
 - **Tab/Enter** navigates controls. **Esc** cancels a selection or returns from help. Menu opens the guide and sound/motion settings.
 - In the war chest, select an owned item and click an empty anchor cell, or drag packed equipment. **WASD** moves its cursor, **R** rotates the selected placement shape, **F** places. Stored equipment gives no combat ability.
 - Retreat requires a second click. Defeat preserves equipment, gold and experience.
@@ -46,19 +69,19 @@ Battle-only practice trial (does not read or write player saves): `sh scripts/pl
 
 Attacks now lunge, arrows and spells travel to their targets, and damage follows impact. Cleave marks both victims; defeated troops fade before the formation closes up. Healing, shared shields, absorbed hits, stuns and incoming reinforcements have distinct cues. Rapid commands preserve movement continuity and moving targets keep their clickable regions.
 
-Effects finish within 0.68 seconds. The final result stays on the battlefield briefly before rewards; Continue or Space skips this presentation without changing rewards. Undo and navigation cancel outstanding effects. Menu → reduced motion removes spatial effects and keeps a stationary result summary. Buttons have a short press response; victory illustrations reveal once on entering rewards.
+Effects finish within 0.68 seconds. Enemy-turn results remain readable until the next hero/command selection. The final battlefield result stays briefly before rewards; Continue or Space skips this presentation without changing rewards. Undo and navigation cancel outstanding effects. Menu → reduced motion removes spatial effects and keeps a stationary result summary. Buttons have a short press response; victory illustrations reveal once on entering rewards.
 
-### Learn through your first battle
+### Legacy earned-rune opening
 
 Genuinely new campaigns open directly into the Lantern Gate defense with sword, bow and shield already packed. Four optional contextual lessons teach attack, cross-front Volley, block and resolving the enemy turn. They advance on actual actions, respect Undo and can be skipped. First victory earns a storm rune instead of presenting the banner draft. The reward leads directly to the chest, highlights legal weapon-adjacent cells, and explains the real +2 command-damage benefit. Test this loadout opens battle two; the hint follows available linked attacks and recovers from fallen heroes or exhausted orders.
 
-After battle two the guided company opens up to side quests, contracts and banners. Explore without guidance exposes systems at their existing level/story requirements; rewards are not forfeited. The optional validated opening state survives saves. Existing campaigns are not enrolled, do not lose their starter rune or first banner, and keep their existing access. Practice app/command uses `--pocket-demo --banner-opening`; bare `--pocket-demo` remains the legacy isolated fixture mode.
+After battle two the legacy guided company opens up to side quests, contracts and banners. Explore without guidance exposes systems at their existing level/story requirements; rewards are not forfeited. The optional validated opening state survives saves. Existing campaigns are not enrolled, do not lose their starter rune or first banner, and keep their existing access. Story practice uses `--story-demo`; `--pocket-demo --banner-opening` preserves this earlier two-battle regression mode, and bare `--pocket-demo` remains the legacy isolated fixture.
 
 Hints explain recovery if Lysa falls or her bow is stored. Mouse and keyboard target previews show damage after armor, Cleave's area, and stun's attack cancellation. At level one, contracts and the banner-management tab stay locked until level two; combat commands remain fully available.
 
 Every level-up now explains how to use its unlocks: ready immediately, free in storage, earned-gold purchase, or recruitment followed by packing. Two focal effects are Cleave's paired impact strokes and a 0.65-second level seal. The seal never blocks reward selection and does not replay when inspecting rewards; reduced motion shows its finished state.
 
-## Campaign and progression
+## Free exploration and legacy progression
 
 Six main encounters plus six optional side quests, across three chapters and six company levels. Main first clears grant 70 XP; company levels need 70 XP each. Main replays award half gold and 35 XP, with enemy health scaling. Side quests grant 35 XP on their first clear only. Level 6 is the current content cap, not a promise of infinite new content.
 
@@ -117,7 +140,7 @@ Old active saves keep their original battle rules. Mastery starts counting with 
 
 ## Saves
 
-Auto-saves after meaningful actions. macOS default: `~/Library/Application Support/Godot/app_userdata/War Chest/iron-and-ember-v2.json`. The earlier campaign-v1.json is preserved separately. No account, cloud sync, analytics, purchases, or runtime network traffic. Malformed saves are preserved and saving is disabled with a visible recovery message. Move a broken save aside before relaunching; never delete it as an automated fix.
+Auto-saves after meaningful actions. macOS storage: `~/Library/Application Support/Godot/app_userdata/War Chest/`. Story uses `winter-wages-story-v1.json`; the original company keeps `iron-and-ember-v2.json`. The earlier campaign-v1.json is preserved separately. No account, cloud sync, analytics, purchases, or runtime network traffic. Malformed saves are preserved and saving is disabled for that company with a visible recovery message. A healthy separate company remains accessible. Move a copy of a broken save aside before relaunching; never delete it as an automated fix.
 
 `-- --pocket-demo` starts an isolated practice campaign; `-- --pocket-battle` opens its first battle directly. Neither reads or writes player saves/settings. The old scene's test-mode flags do not apply to Pocket Siege.
 
@@ -127,22 +150,24 @@ Auto-saves after meaningful actions. macOS default: `~/Library/Application Suppo
 sh scripts/check.sh
 ```
 
-Runs Godot import/script diagnostics and thirteen test suites, including the earned two-battle opening, practice startup, complete earned twelve-encounter journey with save/restore after each turn, and bounded idle/navigation/scene-cleanup stress. The current restricted host emits a macOS system-CA diagnostic and cannot save editor preferences, so the strict wrapper is not green here. Direct headless suite assertions pass with explicit temporary log paths. Native graphical requalification remains blocked; do not launch background GUI probes from the restricted agent. A legal-action solver proving winnability is not proof of long-term fun or human difficulty balance.
+Source verification covers import, seventeen game suites and isolated runner/local/app launcher checks with official Godot 4.7.2. Coverage includes two complete earned story routes with exact save/restore replay, all three decisions, physical extraction, malformed-save retention, actual story UI callbacks and 40 battle/navigation cleanup cycles. Story rule/UI/save-slot suites contain 263/305/32 checks. The expanded UI checks exercise free switching, free Merrin arrival, packed commands and real level unlocks. Native input previously verified the opening conversation, Gate victory, rune packing and two actual 10-HP Ashen kills with the rune's 10-damage Cleave. The current onboarding pass adds 45 native fixtures across 1152×720, 1440×900 and 1600×1000. A legal-action solver proving winnability does not prove enjoyment or human difficulty balance; rendered teaching does not establish first-time player comprehension.
 
 ## Structure
 
 - `scripts/siege_game.gd`: three-front combat, inheriting inventory/progression/persistence from game.gd.
 - `scripts/pocket_campaign.gd`: contracts, renown, banners, enemy roles and backward-compatible save extensions.
 - `scripts/hero_campaign.gd`: hero mastery snapshots, command synergies and optional battle objectives.
-- `scripts/journey_game.gd`: current model; authored quests, milestone gates, packed relics and telegraphed hazards.
+- `scripts/journey_game.gd`: legacy quests, milestone gates, packed relics and telegraphed hazards.
+- `scripts/story_data.gd`, `story_game.gd`: authored scenes, decisions, paced campaign and save/objective rules.
+- `scripts/pocket_story.gd`: selected native Company & Consequences story presentation.
 - `scripts/pocket_main.gd`: current full-window game UI.
 - `scripts/pocket_field.gd`, `pocket_art.gd`: battle presentation and art.
 - `scripts/pocket_chest.gd`: shaped equipment packing view.
 - `tests/`: isolated model checks and campaign regression.
 - `ASSETS.md`, `ART_PROMPTS.md`: provenance and generated-art recipe.
 
-Active scope and verification: https://github.com/sarthakagrawal927/war-chest/issues/1
+Active scope and verification: https://github.com/Significant-Hobbies/war-chest/issues/1
 
 ## Current boundaries
 
-Local playable prototype, not a finished commercial-quality game. September 23 adds contracts and banners using the current keep/reward system, plus illustrated support troops and enemy roles. Owner acceptance remains open. No exported/notarized app, distinct battle maps, polished attack-animation sets, soundtrack, complete screen-reader support or long-term balance qualification yet. Source and media are local and uncommitted; remote is private and contains the tracking issue, not a pushed game build.
+Local playable story with reviewed rules, controls and packaging. The independent story presentation review records 36/40 critique and 16/20 audit, with concrete deductions. Owner acceptance, human attachment, long-term balance/enjoyment, a full manual story route, VoiceOver traversal and story performance remain unverified. Earlier battle timing averaged 20.37 ms per frame with 34.76 ms p95 on this host; the story work does not establish a performance improvement or smooth 60 fps. No exported/notarized release, distinct battle maps or soundtrack. The shared visual checker still requires unsupported 390/768 mobile widths; native applicability is recorded in the story review. No commit, push or release was made.

@@ -156,7 +156,7 @@ func recruit() -> bool:
  if campaign.gold<60: return fail("Merrin's contract costs 60 gold.")
  campaign.gold -= 60
  campaign.mage = true
- campaign.items.staff = 0
+ if not campaign.items.has("staff"): campaign.items.staff = 0
  message = "Merrin joins, bringing a storm staff. Pack it to unlock Storm bolt."
  return true
 
@@ -482,7 +482,7 @@ func valid_pos(p) -> bool:
  return p is Array and p.size()==2 and integer_in(p[0],0,7) and integer_in(p[1],0,7)
 
 func validate_save(data) -> String:
- if not data is Dictionary or data.get("version")!=VERSION: return "Save format is unrecognized."
+ if not data is Dictionary or not integer_in(data.get("version"),VERSION,VERSION): return "Save format is unrecognized."
  var c=data.get("campaign")
  if not c is Dictionary: return "Campaign data is missing."
  for key in ["gold","xp","unlocked"]:
@@ -501,7 +501,12 @@ func validate_save(data) -> String:
   if not p is Array or p.size()!=3: return "Invalid equipment placement."
   for n in p:
    if not integer_in(n,0,5): return "Invalid equipment coordinates."
-  if p[2]>3 or not can_place(id,int(p[0]),int(p[1]),int(p[2]),c.placements): return "Equipment overlaps or leaves the chest."
+  if p[2]>3: return "Invalid equipment rotation."
+ # Overlap checks inspect the entire layout. Validate every record before any
+ # geometry helper can read a malformed neighboring placement.
+ for id in c.placements:
+  var p=c.placements[id]
+  if not can_place(id,int(p[0]),int(p[1]),int(p[2]),c.placements): return "Equipment overlaps or leaves the chest."
  var b=data.get("battle")
  if not b is Dictionary: return "Battle data is missing."
  if b.is_empty(): return ""

@@ -40,6 +40,14 @@ func _init():
  broken=g.snapshot()
  broken.battle.heroes[0].hp=-1
  check(not copy.restore(broken),"invalid health rejected")
+ for bad_type in [false,"2",[],{},-1,1.5]:
+  broken=g.snapshot()
+  broken.version=bad_type
+  before=copy.snapshot()
+  check(not copy.restore(broken) and copy.snapshot()==before,"wrong-type siege version rejected atomically")
+  broken=g.snapshot()
+  broken.battle.enemies[0].target=bad_type
+  check(not copy.restore(broken) and copy.snapshot()==before,"wrong-type enemy target rejected atomically")
  DirAccess.make_dir_recursive_absolute("res://artifacts/test-saves")
  var path="res://artifacts/test-saves/siege-test-%d.json" % OS.get_process_id()
  check(g.save_to(path),"save file")
@@ -51,6 +59,16 @@ func _init():
  check(not copy.load_from(malformed) and copy.save_locked,"malformed locks writes")
  check(not copy.save_to(malformed),"malformed save cannot be overwritten")
  check(FileAccess.get_file_as_string(malformed)=="{broken","original preserved")
+ var target_path=path+"-bad-target"
+ broken=g.snapshot()
+ broken.battle.enemies[0].target=false
+ var original=JSON.stringify(broken)
+ f=FileAccess.open(target_path,FileAccess.WRITE)
+ f.store_string(original);f.close()
+ var protected=Game.new()
+ before=protected.snapshot()
+ check(not protected.load_from(target_path) and protected.save_locked and protected.snapshot()==before,"schema-invalid target protects file and current state")
+ check(not protected.save_to(target_path) and FileAccess.get_file_as_string(target_path)==original,"schema-invalid original bytes retained")
  g.retreat()
  var gold=g.campaign.gold
  g.settle(true)

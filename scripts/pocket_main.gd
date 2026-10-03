@@ -2,25 +2,42 @@ extends Control
 ## THESIS: an enduring company, built through equipment decisions and visible threats.
 ## OWN-WORLD: warm stone, olive standards, ink controls, brick enemies, ochre orders.
 ## STORY: defend the gate, recover a rune, pack it, use its power in the next battle.
-## FIRST VIEWPORT: three illustrated approaches, live troops and a compact command rail.
-## FORM: owner-selected A, refined Banner & Steel. Flat 2D, adult proportions, no chibi.
-const Game=preload("res://scripts/opening_game.gd")
+## FIRST VIEWPORT: an open crossing, visible families, live threats and actor-context orders.
+## FORM: owner-selected The Last Crossing; elevated world, persistent company and camp.
+const Game=preload("res://scripts/story_game.gd")
+const Story=preload("res://scripts/pocket_story.gd")
 const Art=preload("res://scripts/pocket_art.gd")
 const Field=preload("res://scripts/pocket_field.gd")
 const Chest=preload("res://scripts/pocket_chest.gd")
 const Coach=preload("res://scripts/pocket_coach.gd")
 const Unlock=preload("res://scripts/pocket_unlock.gd")
+const Preview=preload("res://scripts/command_preview.gd")
 const SAVE="user://iron-and-ember-v2.json"
+const STORY_SAVE="user://winter-wages-story-v1.json"
 const SETTINGS="user://pocket-settings.cfg"
-const PAPER=Color("f4ebd8")
-const NAVY=Color("203340")
-const BLUE=Color("405947")
-const SKY=Color("dfd4bb")
-const GOLD=Color("dbac51")
-const MUTED=Color("596050")
-const CORAL=Color("9d4133")
+const PAPER=Color("efe8d6")
+const NAVY=Color("15282b")
+const BLUE=Color("294743")
+const SKY=Color("c5c4a5")
+const GOLD=Color("e9b85f")
+const MUTED=Color("566b5c")
+const CORAL=Color("c15b49")
 const SHORT={"cleave":"Cleave","ward":"Shield","volley":"Volley","spark":"Storm","mend":"Heal","pin":"Pin","frost":"Freeze","rally":"Rally","gust":"Gust","bolt":"Bolt","strike":"Strike","guard":"Guard","move":"Move"}
 const GEAR_EFFECT={"blade":"Rowan · Cleave hits every foe on his front.","bow":"Lysa · Volley reaches any front.","ward":"Rowan · Shield protects any ally.","cube":"Touch weapons to add 2 damage to their commands.","staff":"Merrin · Storm deals damage and cancels an attack.","flask":"Merrin · Heal restores an ally's health.","ballista":"Adds a ballista with ranged Bolt in every battle.","frost":"Lysa · Freeze deals damage and cancels an attack."}
+
+class OrderLink extends Control:
+ var battlefield
+ var actor=""
+ var bounds=Rect2()
+ func _process(_delta):
+  if battlefield.motion.active():queue_redraw()
+ func _draw():
+  var unit=battlefield.game.ally(actor)
+  if unit.is_empty() or unit.hp<=0:return
+  var at=battlefield.motion.position(actor,battlefield.unit_position(unit,false))+Vector2(0,87)
+  var end=Vector2(clampf(at.x,bounds.position.x+22,bounds.end.x-22),bounds.position.y)
+  if at.x>bounds.end.x:end=Vector2(bounds.end.x,clampf(at.y,bounds.position.y+12,bounds.end.y-12))
+  if at.distance_to(end)>9:draw_line(at,end,Color("e9b85f",0.6),2,true)
 var game=Game.new()
 var field
 var hud: Control
@@ -49,6 +66,11 @@ var muted=false
 var coaching=true
 var unlock_seen=""
 var demo=false
+var save_path=SAVE
+var legacy_save=SAVE
+var story_save=STORY_SAVE
+var story_open_error=""
+var story_notice=""
 var font=SystemFont.new()
 var display_font=SystemFont.new()
 var sound: AudioStreamPlayer
@@ -58,14 +80,15 @@ var finish_tween: Tween
 var last_surface=""
 var actor_controls=[]
 var motion_was_active=false
+var context_rect=Rect2(350,620,700,210)
 
 func _ready():
  get_window().min_size=Vector2i(1152,720)
  var args=OS.get_cmdline_user_args()
- demo="--pocket-demo" in args or "--pocket-battle" in args
- var fresh=(not demo and not FileAccess.file_exists(SAVE)) or (demo and "--banner-opening" in args)
+ demo="--pocket-demo" in args or "--pocket-battle" in args or "--story-demo" in args
+ var fresh=demo and "--banner-opening" in args
  if not demo:
-  game.load_from(SAVE)
+  load_local_company()
   var settings=ConfigFile.new()
   if settings.load(SETTINGS)==OK:
    muted=bool(settings.get_value("play","muted",false))
@@ -76,12 +99,24 @@ func _ready():
  var t=Theme.new();t.default_font=font;t.default_font_size=18;theme=t
  field=Field.new();field.game=game;field.size=Vector2(1440,900);add_child(field)
  sound=AudioStreamPlayer.new();add_child(sound)
- if fresh and game.enroll_opening(): game.begin(0);persist()
+ if "--story-demo" in args:
+  if game.enroll_story(): persist()
+ elif fresh and game.enroll_opening(): game.begin(0);persist()
  elif "--pocket-battle" in args: game.begin(0)
  if not game.battle.is_empty(): page="battle"
  elif game.opening_guided() and game.opening_stage() in [1,2]: page="chest";gear="cube"
+ if game.story_active() and game.campaign.story.phase in ["intro","outro","ending"] and game.battle.is_empty(): page="story"
  mission=mini(game.campaign.unlocked,game.level()-1)
  show_page()
+
+func load_local_company():
+ # Separate local slots: restoring any original company never enrolls it.
+ game=Game.new()
+ save_path=story_save if FileAccess.file_exists(story_save) or not FileAccess.file_exists(legacy_save) else legacy_save
+ var fresh=not FileAccess.file_exists(save_path)
+ game.load_from(save_path)
+ if fresh and game.enroll_story(): game.save_to(save_path)
+ if is_instance_valid(field): field.game=game
 
 func rounded(fill: Color,radius=4,edge=Color(0,0,0,0),border=0) -> StyleBoxFlat:
  var s=StyleBoxFlat.new();s.bg_color=fill;s.set_corner_radius_all(mini(radius,4));s.border_color=edge;s.set_border_width_all(border)
@@ -99,23 +134,25 @@ func text(value: String,rect: Rect2,sz=20,color=NAVY,bold=false) -> Label:
  # Establish wrapping width before text; otherwise Label first measures at 0px
  # and retains a thousands-of-pixels minimum height for this HUD rebuild.
  l.mouse_filter=Control.MOUSE_FILTER_IGNORE;l.position=rect.position;l.size=rect.size;l.text=value;hud.add_child(l)
+ l.set_meta("layout_rect",rect)
  return l
 
 func button(value: String,rect: Rect2,action: Callable,primary=false,disabled=false) -> Button:
  var b=Button.new();b.text=value;b.position=rect.position;b.size=rect.size;b.disabled=disabled
- b.add_theme_stylebox_override("normal",rounded(NAVY if primary else PAPER,4,Color("b5aa90"),1))
- b.add_theme_stylebox_override("hover",rounded(BLUE if primary else Color("e4d9bf"),4,NAVY,1))
+ b.add_theme_stylebox_override("normal",rounded(GOLD if primary else PAPER,4,Color("b5aa90"),1))
+ b.add_theme_stylebox_override("hover",rounded(GOLD.lightened(0.1) if primary else Color("e4d9bf"),4,NAVY,1))
  b.add_theme_stylebox_override("pressed",rounded(GOLD))
  b.add_theme_stylebox_override("disabled",rounded(Color("ddd5c5")))
  b.add_theme_stylebox_override("focus",rounded(Color(0,0,0,0),16,NAVY,3))
- b.add_theme_color_override("font_color",PAPER if primary else NAVY)
- b.add_theme_color_override("font_hover_color",PAPER if primary else NAVY)
+ b.add_theme_color_override("font_color",NAVY)
+ b.add_theme_color_override("font_hover_color",NAVY)
  b.add_theme_color_override("font_pressed_color",NAVY)
+ b.add_theme_color_override("font_focus_color",NAVY)
  b.add_theme_color_override("font_disabled_color",MUTED)
  b.add_theme_font_override("font",font);b.add_theme_font_size_override("font_size",18)
  b.button_down.connect(func():
   if reduced_motion or b.disabled: return
-  var previous=b.get_meta("press_tween",null)
+  var previous=b.get_meta("press_tween") if b.has_meta("press_tween") else null
   if previous: previous.kill()
   b.self_modulate=Color(0.93,0.89,0.80)
   var press=b.create_tween();b.set_meta("press_tween",press)
@@ -133,12 +170,18 @@ func show_page():
  hud=Control.new();hud.size=Vector2(1440,900);hud.mouse_filter=Control.MOUSE_FILTER_IGNORE;add_child(hud)
  inspection=null;card_buttons=[];actor_controls=[]
  field.battle_view=page=="battle";field.selected=selected;field.card=chosen;field.highlighted=target;field.reduced_motion=reduced_motion;field.queue_redraw()
+ field.story_scene=page=="story"
+ field.surface=page
+ field.world_state=""
  if page!="battle": field.clear_motion()
  match page:
   "keep": keep_page()
   "chest": chest_page()
   "shop": shop_page()
   "guide": guide_page()
+  "story": Story.scene(self)
+  "journal": Story.journal(self)
+  "story_banners": Story.banners(self)
   "battle":
    if game.battle.phase=="playing" or finishing_impact: battle_page()
    else: reward_page()
@@ -149,33 +192,67 @@ func show_page():
     node.pivot_offset=node.size/2;node.scale=Vector2.ONE*0.94
     node.create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT).tween_property(node,"scale",Vector2.ONE,0.32)
  last_surface=surface
- if page!="battle" or game.save_error!="" or mastery_notice!="":
+ var compact_save_warning=game.save_error!="" and (page=="battle" or page=="guide" or game.campaign.has("story"))
+ status=null
+ if ((page!="battle" and (page!="story" or story_notice!="")) or mastery_notice!="") and not compact_save_warning:
   panel(Rect2(20,857,1400,32),PAPER,10)
   status=text(game.save_error if game.save_error!="" else (mastery_notice if mastery_notice!="" else game.message),Rect2(34,859,1240,30),18 if mastery_notice!="" else 15,CORAL if game.save_error!="" else MUTED)
- text("Practice session" if demo else "Local play",Rect2(1292,872,128,22),12,MUTED)
+ if game.save_error=="": text("Practice session" if demo else "Local play",Rect2(1292,872,128,22),12,MUTED)
  if keep_focus!="":
+  var restored=false
   for node in hud.get_children():
    if node is Button and node.get_meta("focus_key",node.text)==keep_focus and not node.disabled:
+    node.grab_focus();restored=true;break
+  if not restored and (keep_focus.begins_with("command_") or keep_focus.begins_with("actor_") or keep_focus.begins_with("hero_")):
+   for card in card_buttons:
+    if not card.disabled: card.grab_focus();restored=true;break
+   if not restored:
+    for node in hud.get_children():
+     if node is Button and node.get_meta("focus_key","")=="end_turn": node.grab_focus();break
+  if not restored and keep_focus.begins_with("story_"):
+   var preferred=["story_continue","story_march","story_reward_continue","story_retry","story_choice_reinforce","story_choice_ward","story_choice_hold"]
+   for key in preferred:
+    for node in hud.get_children():
+     if node is Button and not node.disabled and node.get_meta("focus_key","")==key:
+      node.grab_focus();restored=true;break
+    if restored: break
+   if not restored:
+    for node in hud.get_children():
+     if node is Button and not node.disabled: node.grab_focus();break
+ if page=="story" and get_viewport().gui_get_focus_owner()==null:
+  for node in hud.get_children():
+   if node is Button and not node.disabled and (node.get_meta("focus_key","")=="story_continue" or str(node.get_meta("focus_key","")).begins_with("story_choice_")):
     node.grab_focus();break
+ # Restoring a control's focus must not replace the latest action/error feedback.
+ if page=="battle" and chosen=="move" and not game.battle.has("story"): inspect("")
+ elif page=="battle" and (battle_notice!="" or chosen!="move"): inspect(default_detail())
  if game.save_error!="":
-  panel(Rect2(20,824,1400,71),PAPER,10)
-  text("SAVING DISABLED — this session will not be kept. "+game.save_error,Rect2(34,829,1360,62),18,CORAL,true)
+  if compact_save_warning:
+   panel(Rect2(20,864,1400,34),PAPER,10)
+   var warning=text("SAVING DISABLED · This session will not be kept. Open Menu for recovery details.",Rect2(34,866,1360,30),18,CORAL,true)
+   warning.set_meta("save_warning",true)
+  else:
+   panel(Rect2(20,824,1400,71),PAPER,10)
+   text("SAVING DISABLED — this session will not be kept. "+game.save_error,Rect2(34,829,1360,62),18,CORAL,true)
 
 func persist():
- if not demo: game.save_to(SAVE)
+ if not demo: game.save_to(save_path)
 
 func navigate(to: String):
  cancel_combat_animation()
  mastery_notice=""
+ story_notice=""
  page=to;chosen="";target="";retreat_confirm=false;show_page()
 
 func header(title: String,sub: String):
  text(title,Rect2(48,30,900,60),38,NAVY,true)
  text(sub,Rect2(50,99,1030,38),19,MUTED)
  text("Lv %d  ·  %d gold" % [game.level(),game.campaign.gold],Rect2(1137,34,270,35),21,NAVY,true)
- button("How to play",Rect2(1203,87,185,44),func():guide_return=page;navigate("guide"))
+ if page!="guide":
+  button("How to play",Rect2(1203,87,185,44),func():guide_return=page;navigate("guide"))
 
 func keep_page():
+ if game.story_active(): Story.road(self);return
  var first=game.level()==1
  var starter_packed=game.campaign.placements.has_all(["blade","bow","ward","cube"])
  header("War Chest", ("Your gear is already packed. Start the first battle; learn by giving real orders." if starter_packed else "Stored gear gives no commands. Pack equipment before battle, or fight with your current loadout.") if first else "Your company, your next move. Inspect a hero to see their growth.")
@@ -197,6 +274,10 @@ func keep_page():
   mastery_button.set_meta("focus_key","mastery_"+id)
   mastery_button.tooltip_text=game.mastery_effect(id,maxi(1,game.mastery_rank(id)))
  button("Pack equipment",Rect2(56,752,284,66),func():navigate("chest"))
+ if not game.campaign.has("story"):
+  button("Begin story mode",Rect2(56,163,320,48),start_new_story,true).tooltip_text="Start the winter-wages story with a new company. Your original company keeps its separate save."
+ elif game.campaign.has("story"):
+  button("The wages are home · Journal",Rect2(56,163,393,48),func():navigate("journal"))
  button("Explore all systems" if early else "Recruit & upgrade",Rect2(361,752,291,66),func():
   if early: game.skip_opening();persist();show_page()
   else: navigate("shop"))
@@ -229,6 +310,47 @@ func start_battle():
  if started: page="battle";selected="rowan";chosen="";battle_notice="";undo={};persist()
  show_page()
 
+func start_new_story():
+ var next=Game.new()
+ if FileAccess.file_exists(story_save) and not demo:
+  next.load_from(story_save)
+  if next.save_locked: story_open_error=next.save_error;game.message="Story save kept unchanged. Open How to play for recovery details.";show_page();return
+ else:
+  if not next.enroll_story(): return
+ game=next;field.game=game;save_path=story_save;story_open_error=""
+ selected="rowan";undo={};persist();navigate("battle" if not game.battle.is_empty() else ("story" if game.story_active() and game.campaign.story.phase!="prepare" else "keep"))
+
+func story_advance():
+ if not game.advance_story(): story_notice=game.message;show_page();return
+ story_notice=""
+ persist()
+ if game.campaign.story.phase=="prepare":
+  if game.story_node().id=="ashen": gear="cube";chest_cursor=Vector2i(1,0);navigate("chest")
+  else: navigate("keep")
+ elif game.campaign.story.phase=="complete": navigate("keep")
+ else: navigate("story")
+
+func story_choose(id: String):
+ if game.choose_story_option(id): story_advance()
+ else: story_notice=game.message;show_page()
+
+func start_story_battle():
+ if game.begin_story_node():
+  page="battle";selected="rowan";chosen="";target="";battle_notice="";undo={};unlock_seen="";persist()
+ show_page()
+ if page=="battle" and game.battle.phase=="playing":
+  for b in card_buttons:
+   if not b.disabled: b.grab_focus();break
+  # Keyboard focus starts on a card, but the opening instruction stays readable.
+  inspect(default_detail())
+
+func open_original_company():
+ if demo or save_path!=story_save or not FileAccess.file_exists(legacy_save): return
+ var original=Game.new();original.load_from(legacy_save)
+ game=original;field.game=game;save_path=legacy_save;selected="rowan";undo={}
+ mission=mini(game.campaign.unlocked,game.level()-1)
+ navigate("battle" if not game.battle.is_empty() else "keep")
+
 func quests_panel():
  text("The company's side-story",Rect2(871,217,510,48),29,NAVY,true)
  text("%d/6 complete · optional, no daily timers" % game.campaign.journey.completed.size(),Rect2(874,276,493,29),17,MUTED)
@@ -258,7 +380,7 @@ func contracts_panel():
  for id in Game.CONTRACTS:
   var info=game.contract_info(id,contract_tier)
   var y=393+i*75
-  button("%s · %dg" % [Game.CONTRACTS[id].name,info.gold+game.banner_rank("fortune")*10],Rect2(872,y,493,49),func():contract_id=id;show_page(),contract_id==id)
+  button("%s · %d gold" % [Game.CONTRACTS[id].name,info.gold+game.banner_rank("fortune")*10],Rect2(872,y,493,49),func():contract_id=id;show_page(),contract_id==id)
   i+=1
  var info=game.contract_info(contract_id,contract_tier)
  text(info.desc,Rect2(874,628,491,83),19,NAVY)
@@ -278,6 +400,11 @@ func banners_panel():
  text("Earn your first banner by winning a battle." if game.war().equipped=="" else "Active: "+Game.BANNERS[game.war().equipped].name,Rect2(874,806,493,43),17,MUTED)
 
 func battle_page():
+ if game.battle.has("story"):
+  crossing_battle_page();return
+ legacy_battle_page()
+
+func legacy_battle_page():
  var m=game.encounter()
  panel(Rect2(20,18,1400,143),PAPER)
  panel(Rect2(20,632,1400,250),PAPER)
@@ -304,8 +431,8 @@ func battle_page():
  for i in range(6+(1 if game.level()>=5 else 0)):
   panel(Rect2(660+i*33,80,22,22),GOLD if i<game.battle.commands else SKY,11)
  icon("ward",Rect2(1097,29,33,33),BLUE)
- text("%d / 30" % game.battle.gate,Rect2(1141,29,144,36),23,NAVY,true)
- text("YOUR GATE",Rect2(1098,75,150,25),12,MUTED,true)
+ text("%d / %d" % [game.battle.gate,game.battle.get("story",{}).get("initial_gate",30)],Rect2(1141,29,144,36),23,NAVY,true)
+ text("IVO'S CART" if game.battle.get("story",{}).get("node","")=="convoy" else "YOUR GATE",Rect2(1098,75,150,25),12,MUTED,true)
  button("Menu",Rect2(1299,30,104,43),func():guide_return=page;navigate("guide"))
  var h=game.ally(selected)
  if h.is_empty() or h.hp<=0:
@@ -327,7 +454,8 @@ func battle_page():
   var b=button("",Rect2(x,807,55,55),func():select_hero(member.id),member.id==selected,member.hp<=0)
   b.text="";b.accessibility_name=member.name;b.set_meta("focus_key","hero_"+member.id)
   icon("owl" if member.id=="fen" and game.campaign.pet=="owl" else member.id,Rect2(x+5,812,45,43))
-  b.tooltip_text=member.name+" · select [%d]" % (i+1)
+  b.tooltip_text=member.name+" · select [%d] · " % (i+1)+Coach.role_text(game,member.id)
+  b.accessibility_description=b.tooltip_text+". Switches your command cards without spending orders."
  var list=game.cards(selected).duplicate()
  if selected!="ballista": list.append("move")
  var width=866.0/list.size()
@@ -348,11 +476,13 @@ func battle_page():
   var cost_label=text(str(cost),Rect2(x+width-48,y+10,27,25),16,NAVY,true)
   cost_label.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
   b.tooltip_text=error if error!="" else detail(id)
+  b.accessibility_description=b.tooltip_text
   b.mouse_entered.connect(func():inspect(error if error!="" else detail(id)))
   b.focus_entered.connect(func():inspect(error if error!="" else detail(id)))
   b.mouse_exited.connect(func():inspect(default_detail()))
   card_buttons.append(b)
- button("Continue  →" if finishing_impact else "End turn  →",Rect2(1233,753,171,67),resolve_turn,true)
+ var end_turn=button("Continue  →" if finishing_impact else "End turn  →",Rect2(1233,753,171,67),resolve_turn,true)
+ end_turn.set_meta("focus_key","end_turn")
  button("Undo [Z]",Rect2(1253,828,133,31),undo_action,false,undo.is_empty())
  if chosen=="move":
   inspection.text=""
@@ -362,6 +492,138 @@ func battle_page():
     if member.hp>0 and member.lane==lane: count+=1
    button("Front %d" % (lane+1),Rect2(493+lane*180,649,167,43),func():move_to(lane),false,h.lane==lane or count>=2)
 
+func crossing_panel(rect: Rect2):
+ var p=panel(rect,Color("12272b"),4)
+ p.add_theme_stylebox_override("panel",rounded(Color("12272b"),4,Color("4a6a62"),1))
+ return p
+
+func crossing_button(value: String,rect: Rect2,action: Callable,primary=false,disabled=false) -> Button:
+ var b=button(value,rect,action,primary,disabled)
+ for state in ["normal","hover","pressed"]:
+  var fill=(GOLD if primary else Color("253a3e")) if state=="normal" else (GOLD.lightened(0.1) if primary else Color("35554d"))
+  b.add_theme_stylebox_override(state,rounded(fill,4,GOLD if primary else Color("668078"),1))
+ b.add_theme_stylebox_override("disabled",rounded(Color("233632"),4,Color("3b524c"),1))
+ b.add_theme_stylebox_override("focus",rounded(Color.TRANSPARENT,4,GOLD,3))
+ for state in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:
+  b.add_theme_color_override(state,NAVY if primary else PAPER)
+ b.add_theme_color_override("font_disabled_color",Color("90a49a"))
+ return b
+
+func crossing_battle_page():
+ var m=game.encounter()
+ var story_id=game.battle.story.node
+ crossing_panel(Rect2(24,24,939,140))
+ text(m.name.to_upper(),Rect2(43,39,901,26),15,GOLD)
+ var goals={"gate":"Keep the crossing open","ashen":"Break the roadblock","scout":"Bring Ivo home","convoy":"Escort Ivo’s supply cart","bell":"Keep the signal bell standing","relic":"Recover the archive seal","beacons":"Light all three watchfires","frost":"Defeat the marshal and his guard","citadel":"Clear the iron patrol","winter":"Hold Winterwatch","crown":"Defeat the Crown’s company","engine":"Recover and extract the pay chest"}
+ var goal=goals.get(story_id,m.name)
+ if story_id=="winter" and game.battle.story.decisions.get("citadel","")=="evacuate":goal="Escort Winterwatch’s families"
+ # Leaves the panel's right side for lesson progress and Skip lessons.
+ text(goal,Rect2(43,73,740,43),29,PAPER,true)
+ var objective=game.battle_brief()
+ if objective!="":
+  if story_id in ["ashen","frost","crown"]:objective="Clear every foe. "+objective
+  elif story_id in ["gate","bell","winter"] and not (story_id=="winter" and game.battle.story.decisions.get("citadel","")=="evacuate"):objective="Hold %d enemy turns. " % m.rounds+objective
+ if objective=="": objective="Protect the gate and company for %d enemy turns." % m.rounds if m.kind=="DEFENSE" else "Clear the enemy company. Keep your companions alive."
+ text(objective,Rect2(44,117,899,43),16,Color("b9c9b7"))
+ crossing_panel(Rect2(987,24,429,140))
+ text("Turn %d%s" % [game.battle.round," / %d" % m.rounds if m.rounds>0 else ""],Rect2(1007,39,247,33),23,PAPER,true)
+ text("%s  %d / %d" % ["Cart" if story_id=="convoy" else "Gate",game.battle.gate,game.battle.story.initial_gate],Rect2(1007,81,255,28),20,PAPER)
+ crossing_button("Menu",Rect2(1303,38,93,42),func():guide_return=page;navigate("guide"))
+ if story_id=="gate":
+  var phases=4 if game.battle.phase=="victory" else mini(3,maxi(0,game.battle.round-1))
+  text("Families crossing · %d / 4 stages safe" % phases,Rect2(1008,117,388,26),15,Color("b9c9b7"))
+ elif game.war().equipped!="":
+  var banner=game.war().equipped
+  text(Game.BANNERS[banner].name+" · "+str(game.banner_rank(banner)),Rect2(1008,117,389,26),15,Color("b9c9b7"))
+ var h=game.ally(selected)
+ if h.is_empty() or h.hp<=0:
+  for member in game.battle.heroes:
+   if member.hp>0: selected=member.id;h=member;break
+ field.selected=selected
+ for member in game.battle.heroes:
+  if member.hp>0: actor_button(member,false)
+ for enemy in game.battle.enemies:
+  if enemy.hp>0: actor_button(enemy,true)
+ # The companion controls are a small, named company, not a stack of cards.
+ crossing_panel(Rect2(24,715,354,133))
+ text("SELECT WHO ACTS · FREE",Rect2(39,727,326,23),13,Color("b9c9b7"))
+ var company=game.battle.heroes
+ var slot=324.0/company.size()
+ for i in range(company.size()):
+  var member=company[i];var x=39+i*slot
+  var b=crossing_button("",Rect2(x,756,slot-7,79),func():select_hero(member.id),member.id==selected,member.hp<=0)
+  b.accessibility_name=member.name;b.set_meta("focus_key","hero_"+member.id)
+  icon("owl" if member.id=="fen" and game.campaign.pet=="owl" else member.id,Rect2(x+5,760,slot-17,43))
+  text(str(i+1),Rect2(x+5,758,18,20),12,NAVY if member.id==selected else PAPER).set_meta("label_for",b.get_instance_id())
+  var name=text("Siege" if member.id=="ballista" else member.name,Rect2(x+2,811,slot-11,24),14,NAVY if member.id==selected else PAPER)
+  name.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+  name.set_meta("label_for",b.get_instance_id())
+  b.tooltip_text=member.name+" · select [%d] · " % (i+1)+Coach.role_text(game,member.id)
+  b.accessibility_description=b.tooltip_text+". Switching is free; the whole company deploys."
+ crossing_panel(Rect2(1101,708,315,140))
+ text("%d orders shared by everyone" % game.battle.commands,Rect2(1119,720,285,27),18,GOLD)
+ var total=7 if game.level()>=5 else 6
+ for i in range(total):panel(Rect2(1120+i*34,756,23,7),GOLD if i<game.battle.commands else Color("405650"),2)
+ var clear_label="Move the families onward →" if story_id=="gate" else "Advance to the next turn →"
+ var next="Continue →" if finishing_impact else ("Let enemies act →" if game.battle.enemies.any(func(enemy):return enemy.hp>0) else clear_label)
+ var end_turn=crossing_button(next,Rect2(1118,783,281,48),resolve_turn,true)
+ end_turn.add_theme_font_size_override("font_size",17);end_turn.set_meta("focus_key","end_turn")
+ # One contextual order surface stays beside the selected actor's crossing.
+ var at=field.unit_position(h,false)
+ context_rect=Rect2(clampf(at.x-290,400,1075-650),620,650,228)
+ var link=OrderLink.new();link.battlefield=field;link.actor=selected;link.bounds=context_rect;link.size=Vector2(1440,900);link.mouse_filter=Control.MOUSE_FILTER_IGNORE;hud.add_child(link)
+ crossing_panel(context_rect)
+ var x=context_rect.position.x
+ text(h.name,Rect2(x+17,629,119,35),24,PAPER,true)
+ text(Coach.role_text(game,selected),Rect2(x+141,635,352,27),16,PAPER)
+ text("%d HP%s" % [h.hp," · %d block" % h.shield if h.shield>0 else ""],Rect2(x+503,635,130,26),15,Color("b9c9b7"))
+ inspection=text(default_detail(),Rect2(x+17,670,617,53),17,PAPER)
+ var list=game.cards(selected).duplicate()
+ if selected!="ballista":list.append("move")
+ var signature=[]
+ for id in ["rally","ward","cleave","frost","volley","mend","spark","pin","gust","bolt"]:
+  if id in list:signature.append(id)
+ if signature.is_empty():signature=["strike","guard"]
+ if signature.size()>3:signature=signature.slice(0,3)
+ var basics=list.filter(func(id):return id not in signature)
+ var width=616.0/signature.size()
+ if chosen!="move":
+  for i in range(signature.size()):
+   crossing_order(signature[i],Rect2(x+17+i*width,731,width-10,49),true)
+ for i in range(basics.size()):
+  crossing_order(basics[i],Rect2(x+17+i*112,790,102,38),false)
+ var undo_control=crossing_button("Undo [Z]",Rect2(x+506,790,127,38),undo_action,false,undo.is_empty())
+ undo_control.add_theme_font_size_override("font_size",16)
+ var lesson=coach_hint()
+ if not lesson.is_empty():
+  var heading=text(lesson.heading,Rect2(505,38,440,26),16,GOLD)
+  heading.horizontal_alignment=HORIZONTAL_ALIGNMENT_RIGHT
+  var skip=crossing_button("Skip lessons",Rect2(803,74,142,34),func():coaching=false;save_settings();show_page())
+  skip.add_theme_font_size_override("font_size",14)
+ if chosen=="move":
+  inspection.text="Choose a crossing. One move per companion each turn."
+  for lane in range(3):
+   var count=game.battle.heroes.filter(func(member):return member.hp>0 and member.lane==lane).size()
+   var move=crossing_button("Front %d" % (lane+1),Rect2(x+17+lane*205,731,195,49),func():move_to(lane),true,h.lane==lane or count>=2)
+   move.tooltip_text=Game.FRONTS[lane]+": "+("full" if count>=2 else "move here")
+
+func crossing_order(id: String,rect: Rect2,signature: bool):
+ var cost=(0 if game.free_march() else 1) if id=="move" else Game.COMMANDS[id].cost
+ var error=game.move_reason(selected) if id=="move" else game.reason(selected,id)
+ var b=crossing_button("%s · %d" % [SHORT[id],cost],rect,func():choose_card(id),chosen==id or (chosen=="" and signature and id=="ward" and int(game.campaign.get("lessons",15))==0),error!="")
+ b.add_theme_font_size_override("font_size",18 if signature else 16)
+ b.set_meta("focus_key","command_"+id)
+ b.accessibility_name="%s · %d order%s" % [SHORT[id],cost,"" if cost==1 else "s"]
+ b.tooltip_text=error if error!="" else detail(id)
+ b.accessibility_description=b.tooltip_text
+ b.mouse_entered.connect(func():inspect(error if error!="" else detail(id)))
+ b.focus_entered.connect(func():inspect(error if error!="" else detail(id)))
+ b.mouse_exited.connect(func():inspect(default_detail()))
+ card_buttons.append(b)
+
+func open_story_pack(id="cube"):
+ gear=id;rotation_index=0;chest_cursor=Vector2i(1,0);navigate("chest")
+
 func actor_button(u: Dictionary,enemy: bool):
  var b=button("",field.unit_rect(u,enemy),func():on_actor(u.id))
  b.text="";b.accessibility_name=u.name;b.set_meta("focus_key","actor_"+u.id)
@@ -370,21 +632,27 @@ func actor_button(u: Dictionary,enemy: bool):
  for state in ["font_color","font_hover_color","font_pressed_color"]: b.add_theme_color_override(state,Color(0,0,0,0))
  var info=target_detail(u.id) if chosen!="" and chosen!="move" else actor_detail(u,enemy)
  b.tooltip_text=info
+ b.accessibility_description=info
  b.mouse_entered.connect(func():field.highlighted=u.id;field.queue_redraw();inspect(info))
  b.focus_entered.connect(func():field.highlighted=u.id;field.queue_redraw();inspect(info))
  b.mouse_exited.connect(func():field.highlighted=target;field.queue_redraw();inspect(default_detail()))
+ b.focus_exited.connect(func():
+  if field.highlighted==u.id:
+   field.highlighted=target;field.queue_redraw();inspect(default_detail()))
 
 func actor_detail(u: Dictionary,enemy: bool) -> String:
  var info=u.name+" · %d/%d HP" % [u.hp,u.max_hp]
  if enemy: info+=" · "+game.threat(u)+" · "+game.enemy_detail(u)
- elif u.shield>0: info+=" · %d block" % u.shield
+ else:
+  info+=" · "+Coach.role_text(game,u.id)
+  if u.shield>0: info+=" · %d block" % u.shield
  if not enemy and u.id in Game.MASTERY_HEROES:
   var rank=game.mastery_rank(u.id)
   info+=" · Mastery %s: " % Game.RANK_NAMES[rank]+game.mastery_effect(u.id,rank) if rank>0 else " · "+game.mastery_progress(u.id).replace("\n"," · ")
  return info
 
 func inspect(value: String):
- if is_instance_valid(inspection): inspection.text=value
+ if is_instance_valid(inspection): inspection.text="" if page=="battle" and chosen=="move" and not game.battle.has("story") else value
 
 func default_detail() -> String:
  if finishing_impact: return "Victory!" if game.battle.phase=="victory" else "Your company is safe."
@@ -392,7 +660,9 @@ func default_detail() -> String:
  var lesson=coach_hint()
  if not lesson.is_empty(): return lesson.body
  if chosen!="": return detail(chosen)+"  ·  Choose a target."
- return "Choose a command card, then a target."
+ if selected=="merrin" and not game.campaign.placements.has("staff"):
+  return "Merrin selected [4]. Strike or Guard works now. His staff is stored; pack it at camp for Storm. All companions share orders."
+ return game.ally(selected).get("name","Companion")+" selected · "+Coach.role_text(game,selected)+". Choose an order, then its target."
 
 func coach_hint() -> Dictionary:
  if coaching and game.opening_guided() and game.opening_stage()==2 and game.battle.get("mission",-1)==1 and not game.campaign.opening.rune_used:
@@ -407,6 +677,8 @@ func coach_hint() -> Dictionary:
  return Coach.hint(game,selected,chosen) if coaching else {}
 
 func target_detail(id: String) -> String:
+ if game.battle.has("story") and chosen not in ["","move"]:
+  return Preview.description(game,selected,chosen,id)
  var reason=game.reason(selected,chosen,id)
  if reason!="": return reason
  var enemy=game.foe(id)
@@ -473,7 +745,21 @@ func resolve_turn():
  before.motion_attack_state=game.resolution_start;before.motion_absorbed=game.hazard_absorbed
  before.motion_enemy_turn=game.enemy_turn_started
  field.animate_change(before,"","",true);hold_final_impact()
- chosen="";target="";battle_notice=game.message if reduced_motion else "";undo={};tone(160);persist();show_page()
+ chosen="";target=""
+ battle_notice=game.message if reduced_motion else (turn_feedback(field.motion.summary) if coach_hint().is_empty() else "")
+ undo={};tone(160);persist();show_page()
+
+func turn_feedback(summary: String) -> String:
+ if summary=="": return game.message
+ var results=summary.split(" · ")
+ var shown=PackedStringArray()
+ var length=0
+ for result in results:
+  if length+result.length()>145: break
+  shown.append(result);length+=result.length()+3
+ var feedback="Enemy turn · "+" · ".join(shown)
+ if shown.size()<results.size(): feedback+=" · +%d more; inspect troops." % (results.size()-shown.size())
+ return feedback
 
 func hold_final_impact():
  if game.battle.phase=="playing" or reduced_motion or not field.motion.active(): return
@@ -499,6 +785,7 @@ func undo_action():
 
 func reward_page():
  field.battle_view=false;field.queue_redraw()
+ if game.battle.has("story"): Story.reward(self);return
  var won=game.battle.phase=="victory"
  if won and game.opening_stage()==1 and game.opening_guided():
   opening_reward_page();return
@@ -544,6 +831,11 @@ func reward_page():
  button("Choose a banner first" if game.has_loot() else "Back to the keep  →",Rect2(706,774,611,62),return_to_keep,true,game.has_loot())
 
 func return_to_keep():
+ if game.battle.has("story"):
+  if game.battle.phase=="victory": navigate("story");return
+  if game.return_to_camp(): undo={};persist();navigate("keep")
+  else: show_page()
+  return
  var pack_next=game.opening_guided() and game.opening_stage()==1 and game.battle.get("phase","")=="victory"
  game.return_to_camp()
  if not game.battle.is_empty(): show_page();return
@@ -570,9 +862,10 @@ func show_mastery(id: String):
  show_page()
 
 func chest_page():
+ if game.story_active():crossing_chest_page();return
  var teaching=game.opening_guided() and game.opening_stage() in [1,2]
  header("One cell. A stronger weapon." if teaching else "Pack your next victory", "Place the storm rune in a free cell sharing an edge with the sword or bow." if teaching else "Equipment gives you commands. Fit your chosen loadout into the chest.")
- button("← Keep",Rect2(46,157,148,44),func():navigate("keep"))
+ button("← Company road" if game.story_active() else "← Keep",Rect2(46,157,239 if game.story_active() else 148,44),func():navigate("keep"))
  chest=Chest.new();chest.game=game;chest.selected=gear;chest.item_rotation=rotation_index;chest.cursor=chest_cursor;chest.position=Vector2(110,329);chest.scale=Vector2.ONE*1.1;hud.add_child(chest)
  chest.selected_item.connect(func(id):gear=id;rotation_index=int(game.campaign.placements[id][2]);chest_cursor=chest.cursor;show_page())
  chest.placed.connect(func(id,x,y,r):gear=id;rotation_index=r;chest_cursor=Vector2i(x,y);game.place(id,x,y,r);persist();show_page())
@@ -590,13 +883,73 @@ func chest_page():
  button("Rotate [R]",Rect2(112,788,204,46),func():chest.rotate_preview();rotation_index=chest.item_rotation)
  button("Store item",Rect2(334,788,205,46),func():game.stow(gear);persist();show_page())
  text("Drag to pack · WASD: cursor · R: rotate · F: place",Rect2(112,724,572,49),17,MUTED)
- if teaching:
+ if game.story_active():
+  var ready=game.campaign.story.phase=="prepare"
+  var linked=game.empowered("blade") or game.empowered("bow")
+  var needs_rune=game.story_node().id=="ashen" and not linked
+  button("Pack a rune beside a weapon" if needs_rune else "March with the company →",Rect2(777,158,578,53),start_story_battle,true,not ready or needs_rune)
+  if needs_rune and gear=="cube": chest.suggested=rune_suggestions();chest.queue_redraw()
+  if teaching: text("+2 Cleave damage" if game.empowered("blade") else ("+2 Volley damage" if game.empowered("bow") else "Select the rune, then an outlined cell beside a weapon."),Rect2(112,206,570,38),18,BLUE)
+ elif teaching:
   var linked=game.empowered("blade") or game.empowered("bow")
   button("Test this loadout  →" if linked else "Pack a rune beside a weapon",Rect2(777,158,578,53),func():mission=1;keep_mode="campaign";start_battle(),true,not linked)
   if not linked and gear=="cube":
    chest.suggested=rune_suggestions();chest.queue_redraw()
   text("+2 Cleave damage"+(" · +2 Volley damage" if game.empowered("bow") else "") if game.empowered("blade") else ("+2 Volley damage" if game.empowered("bow") else "Select the storm rune, then an outlined free cell beside a weapon."),Rect2(112,206,570,38),18,BLUE)
-  button("Explore without guidance",Rect2(235,158,397,43),func():game.skip_opening();persist();navigate("keep"))
+ button("Explore without guidance",Rect2(235,158,397,43),func():game.skip_opening();persist();navigate("keep"))
+
+func crossing_chest_page():
+ field.world_state="camp"
+ var linked=game.empowered("blade") or game.empowered("bow")
+ var needs_rune=game.story_node().id=="ashen" and not linked
+ text("AT THE COMPANY FIRE",Rect2(72,30,870,28),15,GOLD,true)
+ text("One cell. A stronger weapon." if needs_rune else "Prepare the company",Rect2(70,68,975,65),38,PAPER,true)
+ text("Fit the earned rune beside a weapon: its linked command gains 2 damage." if needs_rune else "Packed equipment gives commands. Stored equipment travels with you, but has no effect in battle.",Rect2(72,139,1050,55),20,PAPER)
+ crossing_button("How to play",Rect2(1184,40,206,46),func():guide_return=page;navigate("guide"))
+ crossing_button("← Company road",Rect2(72,205,251,44),func():navigate("keep"))
+ crossing_button("Pack a rune beside a weapon" if needs_rune else "March with the company →",Rect2(765,205,622,44),start_story_battle,true,game.campaign.story.phase!="prepare" or needs_rune)
+ crossing_panel(Rect2(72,270,610,570));crossing_panel(Rect2(749,270,639,570))
+ text("The company chest",Rect2(110,284,540,39),27,PAPER,true)
+ panel(Rect2(103,333,474,397),PAPER,8)
+ chest=Chest.new();chest.game=game;chest.selected=gear;chest.item_rotation=rotation_index;chest.cursor=chest_cursor;chest.position=Vector2(110,340);chest.scale=Vector2.ONE*1.1;hud.add_child(chest)
+ chest.selected_item.connect(func(id):gear=id;rotation_index=int(game.campaign.placements[id][2]);chest_cursor=chest.cursor;show_page())
+ chest.placed.connect(func(id,x,y,r):gear=id;rotation_index=r;chest_cursor=Vector2i(x,y);game.place(id,x,y,r);persist();show_page())
+ if needs_rune and gear=="cube":chest.suggested=rune_suggestions();chest.queue_redraw()
+ var linked_text=PackedStringArray()
+ if game.empowered("blade"): linked_text.append("+2 Cleave damage")
+ if game.empowered("bow"): linked_text.append("+2 Volley damage")
+ var stored=game.campaign.items.has(gear) and not game.campaign.placements.has(gear)
+ var chest_hint=" · ".join(linked_text) if not linked_text.is_empty() else "Outlined cells link the rune to a weapon."
+ if stored and not (needs_rune and gear=="cube"):
+  var spot=first_fit(gear)
+  if spot.is_empty(): chest_hint=Game.ITEMS[gear].name+" does not fit. Store something to make room."
+  else:
+   chest.suggested=spot;chest.queue_redraw()
+   chest_hint="Outlined: where it fits. Click its top-left cell to pack."
+ text(chest_hint,Rect2(110,736,560,27),17,GOLD)
+ text("Drag · WASD: cursor · R: rotate · F: place",Rect2(110,764,550,20),14,PAPER)
+ crossing_button("Rotate [R]",Rect2(110,790,204,38),func():chest.rotate_preview();rotation_index=chest.item_rotation)
+ crossing_button("Store item",Rect2(334,790,205,38),func():game.stow(gear);persist();show_page())
+ text("Choose your equipment",Rect2(778,286,580,35),26,PAPER,true)
+ var columns=3 if game.campaign.items.size()>10 else 2
+ var item_width=181 if columns==3 else 286
+ var i=0
+ for id in game.campaign.items:
+  var packed=game.campaign.placements.has(id)
+  var b=crossing_button(Game.ITEMS[id].name+("\nPacked" if packed else "\nStored"),Rect2(779+(i%columns)*(item_width+13),337+int(i/columns)*62,item_width,55),func():gear=id;rotation_index=int(game.campaign.placements.get(id,[0,0,0])[2]);show_page(),gear==id)
+  b.add_theme_font_size_override("font_size",16);i+=1
+ text(Game.ITEMS[gear].name,Rect2(779,725,579,32),23,GOLD,true)
+ text(GEAR_EFFECT.get(gear,Game.ITEMS[gear].desc),Rect2(779,767,579,59),18,PAPER)
+
+func first_fit(id: String) -> Array:
+ # Read-only: the model's placement rule decides; nothing is packed here.
+ for y in range(5):
+  for x in range(6):
+   if game.can_place(id,x,y,rotation_index):
+    var out=[]
+    for cell in game.cells(id,[x,y,rotation_index]): out.append(Vector2i(cell[0],cell[1]))
+    return out
+ return []
 
 func rune_suggestions() -> Array:
  var result=[]
@@ -613,8 +966,8 @@ func transact(action: Callable):
  action.call();persist();show_page()
 
 func shop_page():
- header("The quartermaster", "Spend earned gold on heroes and equipment. No real-money purchases.")
- button("← Keep",Rect2(46,157,148,44),func():navigate("keep"))
+ header("The quartermaster", "Company gold repairs our gear. The households' wages stay in their sealed chest." if game.story_active() else "Spend earned gold on heroes and equipment. No real-money purchases.")
+ button("← Company road" if game.story_active() else "← Keep",Rect2(46,157,239 if game.story_active() else 148,44),func():navigate("keep"))
  text("Upgrade & equip",Rect2(50,236,650,47),30,NAVY,true)
  var i=0
  for id in Game.ITEMS:
@@ -624,32 +977,39 @@ func shop_page():
   var b: Button
   if owned:
    var rank=int(game.campaign.items[id]);var locked=id in ["cube","ballista"] or rank>=game.forge_limit()
-   b=button("+%d · Upgrade %dg" % [rank,30+rank*25] if not locked else ("+%d · Complete" % rank if rank==3 or id in ["cube","ballista"] else "+%d · Next rank locked" % rank),Rect2(340,y,312,44),func():transact(func():game.upgrade(id)),false,locked or game.campaign.gold<30+rank*25)
-  else: b=button("Buy · %d gold" % Game.ITEMS[id].price if unlocked else "Level %d" % game.item_level(id),Rect2(340,y,312,44),func():transact(func():game.buy(id)),false,not unlocked or game.campaign.gold<Game.ITEMS[id].price)
-  b.tooltip_text=GEAR_EFFECT[id]
+   var label="Not upgradeable" if id in ["cube","ballista"] else ("+%d · Complete" % rank if rank==3 else ("+%d · Next rank locked" % rank if locked else "+%d · Upgrade %d gold" % [rank,30+rank*25]))
+   b=button(label,Rect2(340,y,312,44),func():transact(func():game.upgrade(id)),false,locked or game.campaign.gold<30+rank*25)
+  else:
+   var story_lock=game.story_item_lock(id)
+   b=button("Joins after the archive" if story_lock!="" else ("Buy · %d gold" % Game.ITEMS[id].price if unlocked else "Level %d" % game.item_level(id)),Rect2(340,y,312,44),func():transact(func():game.buy(id)),false,story_lock!="" or not unlocked or game.campaign.gold<Game.ITEMS[id].price)
+  b.tooltip_text=game.story_item_lock(id) if game.story_item_lock(id)!="" else GEAR_EFFECT[id]
   i+=1
  icon("merrin",Rect2(758,264,160,183))
  text("Merrin",Rect2(962,286,410,45),31,NAVY,true)
- text("Storm mage · damage + stun\nComes with a storm staff.",Rect2(964,344,430,76),20,MUTED)
- button("Already recruited" if game.campaign.mage else ("Recruit · 60 gold" if game.level()>=2 else "Recruit at level 2"),Rect2(778,473,601,52),func():transact(func():game.recruit()),true,game.campaign.mage or game.level()<2 or game.campaign.gold<60)
+ text("Joins free after the archive.\nPack his staff to command Storm." if game.story_active() and not game.campaign.mage else ("Deploys every battle. Select with 4.\nPack staff: Storm; medicine: Heal." if game.campaign.mage else "Recruit for 60 company gold.\nPack his staff to command Storm."),Rect2(964,344,430,76),20,MUTED)
+ button("Already recruited" if game.campaign.mage else ("Joins after the Sunken Reliquary" if game.story_active() else ("Recruit · 60 gold" if game.level()>=2 else "Recruit at level 2")),Rect2(778,473,601,52),func():transact(func():game.recruit()),true,game.story_active() or game.campaign.mage or game.level()<2 or game.campaign.gold<60)
  text("Choose one lasting talent",Rect2(779,559,599,39),23,NAVY,true)
  button("Battlecraft · +1 damage",Rect2(779,611,599,44),func():transact(func():game.choose_talent("might")),game.campaign.talent=="might",game.level()<2 or game.campaign.talent!="")
  button("Resolve · +4 health",Rect2(779,669,599,44),func():transact(func():game.choose_talent("resolve")),game.campaign.talent=="resolve",game.level()<2 or game.campaign.talent!="")
  button("Fen · Wolf",Rect2(779,765,284,47),func():transact(func():game.choose_pet("wolf")),game.campaign.pet=="wolf")
- button("Talon · Owl" if game.level()>=6 else "Owl · Level 6",Rect2(1084,765,294,47),func():transact(func():game.choose_pet("owl")),game.campaign.pet=="owl",game.level()<6)
+ var pet_lock=game.story_pet_lock("owl")
+ button("Talon · After the story" if pet_lock!="" else ("Talon · Owl" if game.level()>=6 else "Owl · Level 6"),Rect2(1084,765,294,47),func():transact(func():game.choose_pet("owl")),game.campaign.pet=="owl",pet_lock!="" or game.level()<6).tooltip_text=pet_lock
 
 func guide_page():
  header("Field manual", "No timer. Take your time with every turn.")
  button("← Back to game",Rect2(47,158,234,48),func():navigate(guide_return))
+ var authored=game.campaign.has("story")
  var sections=[
-  ["Pack","Gear in your chest grants commands. Touch weapons with the rune for +2 damage. Buy gear and recruit at the keep."],
-  ["Command","Choose a hero, then a command and target. Share 6 orders per turn (7 from level 5). Each command is usable once per hero each turn."],
-  ["Protect","Read enemy intentions. Archers hunt weak allies, sappers target the gate, and iron guards block 2 damage per hit. Hover a foe for its rule."],
-  ["Grow","Wins give gold, banners and hero mastery. Mastery ranks at 2/5/9 wins improve each hero's existing commands. Inspect heroes to read effects. Optional objectives award extra gold."]]
+  ["Select & command","All companions deploy. Bottom portraits or 1–5 switch freely. Choose a card, then a target. Each card works once per hero per turn. Six shared orders; seven from level 5."],
+  ["Joining the company","Merrin joins free after the Sunken Reliquary. He deploys next battle; pack his staff for Storm. Fen stays until homecoming; then you can choose Talon." if authored else "Recruit Merrin for 60 company gold from level 2. His staff arrives in storage; pack it for Storm. From level 6, choose Fen or Talon at the quartermaster."],
+  ["Company levels",("Five milestones give +70 XP; each level adds 2 max HP to companions. Other wins give gold and mastery. "+Coach.story_progress(game)) if authored else "Company levels use 70 XP each, up to level 6. Each adds 2 max HP to companions. Victories unlock equipment, talents and skills; buy or pack gear when required."],
+  ["Pack & mastery","Pack gear for commands; storage has no effect. Rowan's Shield protects any ally. End turn: enemies act, orders refresh. Each companion's mastery at 2/5/9 victories applies next battle."]]
+ if story_open_error!="": sections[3]=["Story recovery",story_open_error+" The story file is kept unchanged. "+("The original company save also needs recovery." if game.save_locked else "Your original company remains playable.")]
+ elif game.save_error!="": sections[3]=["Save recovery",game.save_error+" The file is kept unchanged. Move a copy aside before starting a replacement; this session cannot overwrite it."]
  for i in range(4):
   var x=50+(i%2)*704;var y=260+int(i/2)*190
   text(sections[i][0],Rect2(x,y,629,40),30,NAVY,true)
-  text(sections[i][1],Rect2(x,y+55,625,123),23,NAVY)
+  text(sections[i][1],Rect2(x,y+55,625,123),18 if (game.save_error!="" or story_open_error!="") and i==3 else 23,NAVY)
  button("Sound off" if muted else "Sound on",Rect2(49,720,206,49),func():muted=not muted;save_settings();show_page())
  button("Less motion" if reduced_motion else "Motion on",Rect2(274,720,225,49),func():reduced_motion=not reduced_motion;save_settings();show_page())
  var can_replay=game.level()==1 and int(game.campaign.get("lessons",15))==15
@@ -658,6 +1018,11 @@ func guide_page():
   else: coaching=not coaching
   save_settings();show_page())
  text("1–5: hero · Tab / Enter: controls · T / F: target\nSpace: end turn · Z: undo · Esc: cancel / back",Rect2(746,719,645,67),18,MUTED)
+ if not demo:
+  if save_path==story_save and FileAccess.file_exists(legacy_save):
+   button("Open original company",Rect2(746,788,645,47),open_original_company).tooltip_text="Switch to the original separate save. Your story progress is kept."
+  elif save_path==legacy_save:
+   button("Continue story mode" if FileAccess.file_exists(story_save) else "Begin story mode · Separate company",Rect2(746,788,645,47),start_new_story)
  if guide_return=="battle" and not game.battle.is_empty() and game.battle.phase=="playing":
   button("Withdraw — keep gear, forfeit reward?" if retreat_confirm else "Retreat to keep",Rect2(51,788,610,47),func():
    if retreat_confirm: game.retreat();persist();navigate("battle")
@@ -690,6 +1055,7 @@ func _input(event):
  if event.keycode==KEY_ESCAPE:
   if page=="guide": navigate(guide_return)
   elif chosen!="": chosen="";target="";show_page()
+  elif page=="story": guide_return="story";navigate("guide")
   elif page!="keep" and page!="battle": navigate("keep")
  elif page=="chest" and event.keycode in [KEY_W,KEY_A,KEY_S,KEY_D,KEY_R,KEY_F]:
   chest.keyboard(event.keycode);rotation_index=chest.item_rotation;chest_cursor=chest.cursor

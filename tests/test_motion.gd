@@ -81,6 +81,14 @@ func run():
  screen.game.begin(0);screen.game.battle.round=4;screen.resolve_turn();screen.navigate("guide")
  await create_timer(0.7).timeout
  check(screen.page=="guide" and not screen.finishing_impact,"navigation cancels delayed reward callback")
+ screen.game.new_campaign();screen.game.begin(0);screen.page="battle";screen.coaching=false;screen.show_page()
+ screen.choose_card("guard");screen.resolve_turn()
+ var aftermath=screen.battle_notice
+ check(aftermath.contains("Enemy turn") and aftermath.contains("blocked"),"Enemy turn leaves an inspectable exact damage/block summary")
+ await create_timer(0.75).timeout
+ check(not screen.field.motion.active() and screen.inspection.text==aftermath,"Outcome feedback remains after the animation expires")
+ screen.select_hero("lysa")
+ check(screen.battle_notice=="" and screen.inspection.text==screen.default_detail(),"Next selection clears old aftermath for the new decision")
  screen.queue_free();await process_frame;await process_frame
  print("MOTION TESTS: %d checks, %d failures" % [checks,failures])
  quit(1 if failures else 0)

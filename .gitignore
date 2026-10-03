@@ -1,5 +1,6 @@
 .godot/
 .local/
+.fleet-local/
 artifacts/
 assets/models/
 assets/audio/

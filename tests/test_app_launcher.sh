@@ -24,7 +24,7 @@ mv "$APP_FIXTURE" "$APP_TEST_ROOT/Original Bundle Moved"
 APP_BUILT="$APP_TEST_ROOT/Relocated Game.app"
 (cd /private/tmp && "$APP_BUILT/Contents/MacOS/WarChest")
 grep -Fx -- "$APP_BUILT/Contents/Resources/Game/War Chest.pck" "$WAR_CHEST_TEST_ARGS"
-if grep -Fq -- '--pocket-demo' "$WAR_CHEST_TEST_ARGS"; then exit 1; fi
+if grep -Eq -- '^--(pocket-demo|story-demo|banner-opening)$' "$WAR_CHEST_TEST_ARGS"; then exit 1; fi
 test -d "$APP_BUILT/Contents/Resources/Game/logs"
 APP_BEFORE=$(shasum -a 256 "$APP_BUILT/Contents/MacOS/WarChest")
 if sh scripts/build-app.sh "$APP_TEST_ROOT/Original Bundle Moved" "$APP_BUILT" > "$APP_TEST_ROOT/refused.log" 2>&1; then exit 1; fi
@@ -32,8 +32,8 @@ test "$APP_BEFORE" = "$(shasum -a 256 "$APP_BUILT/Contents/MacOS/WarChest")"
 grep -Fq 'Nothing was overwritten' "$APP_TEST_ROOT/refused.log"
 sh scripts/build-app.sh "$APP_TEST_ROOT/Original Bundle Moved" "$APP_TEST_ROOT/Practice Game.app" practice > "$APP_TEST_ROOT/practice-build.log"
 "$APP_TEST_ROOT/Practice Game.app/Contents/MacOS/WarChest"
-grep -Fx -- '--pocket-demo' "$WAR_CHEST_TEST_ARGS"
-grep -Fx -- '--banner-opening' "$WAR_CHEST_TEST_ARGS"
+grep -Fx -- '--story-demo' "$WAR_CHEST_TEST_ARGS"
+if grep -Eq -- '^--(pocket-demo|banner-opening)$' "$WAR_CHEST_TEST_ARGS"; then exit 1; fi
 test "$(/usr/bin/plutil -extract CFBundleIdentifier raw "$APP_TEST_ROOT/Practice Game.app/Contents/Info.plist")" = local.warchest.practice
 echo "APP LAUNCHER: plist, no-start preflight, relocation, spaces, campaign/practice modes, logs and overwrite refusal passed"
 echo "Fixtures retained at $APP_TEST_ROOT"

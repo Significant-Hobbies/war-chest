@@ -1,5 +1,9 @@
 # Asset provenance
 
+## The Last Crossing — October 3, 2026
+
+The selected authored-story world in `scripts/crossing_world.gd` is procedural project artwork: elevated terrain, river, open gate, family procession, camp, cart and mission landmarks. It reuses the unchanged Banner & Steel character atlas below. No external or newly generated media, font files or runtime dependencies were added. The earlier scenery remains for legacy companies. Source drawing-record compositions are diagnostic reconstructions, not native captures or published-build proof.
+
 ## Landing screenshots — October 2, 2026
 
 `site/images/battle-1440.png` and `site/images/chest-1440.png` are unchanged copies of the inspected, approved Banner & Steel native renderer captures at `/tmp/fleet-visual-20261002/war-chest/native/battle-1440.png` and `/tmp/fleet-visual-20261002/war-chest/native/chest-1440.png`. Both are 1440×900 PNGs from the e94dae4 visual audit; capture provenance and limitations are recorded in `/tmp/fleet-visual-20261002/war-chest/report.json`. Their reviewed SHA-256 digests are `ffd2d258227eb6e07ec87fc855f140d4ac1619d0f03aaf17288290b4bb3bd0fc` (battle) and `7f69677ac28486f6b6b936baa6ec5b2589c023381d713477a25381462cd9d3be` (chest); the landing validator checks these exact bytes. They replace the rejected Pocket Siege landing evidence for issue #3 without changing the landing design.
@@ -10,7 +14,7 @@ These are synthetic practice fixtures captured by the native Godot OpenGL render
 
 Owner chose refined A. `assets/banner-steel/lantern-gate.png` and `assets/banner-steel/company-atlas.png` were generated with the built-in image tool using that concept as the style reference. No game-ripped or external proprietary assets. Source outputs retained under `/Users/sarthak/.codex/generated_images/01a0c9fa-25af-79e3-9fb3-b6fe0f5edb22/`: `exec-64d76f77-85f4-4032-9070-25940941aac1.png` (scenery), `exec-e7a9fb36-67c4-4147-8868-dcf1944be84a.png` (atlas). Copied unchanged to the workspace; runtime atlas regions isolate twelve figures. Atlas alpha and crop bounds/content are checked headlessly; native composite still needs owner inspection.
 
-The background has no baked UI or troops. Native Godot controls, target regions, health, intent, commands, hit effects and chest cells remain live. All active game scenes now use these two assets, with paper overlays for nonbattle screens. Media is ignored by Git and must be backed up/copied separately; it is included in the local pack. Prompts: `assets/banner-steel-prompts.md`. No new runtime dependency or network behavior.
+The background has no baked UI or troops. Native Godot controls, target regions, health, intent, commands, hit effects and chest cells remain live. The earlier presentation used these two assets throughout; The Last Crossing now uses the procedural scenery above for authored-story scenes and preserves this background for legacy companies. Media is ignored by Git and must be backed up/copied separately; it is included in the local pack. Prompts: `assets/banner-steel-prompts.md`. No new runtime dependency or network behavior.
 
 ## Preserved Pocket Siege battle trial — September 23, 2026
 

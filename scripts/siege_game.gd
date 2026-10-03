@@ -4,11 +4,11 @@ extends "res://scripts/game.gd"
 const SAVE_VERSION = 2
 const FRONTS = ["High wall", "Causeway", "Lower gate"]
 const SIEGES = [
- {"name":"The Lantern Gate", "kind":"DEFENSE", "desc":"Hold all three fronts for 4 rounds.", "rounds":4, "gold":85},
+ {"name":"The Lantern Gate", "kind":"DEFENSE", "desc":"Hold all three fronts for 4 turns.", "rounds":4, "gold":85},
  {"name":"Break the Ashen Line", "kind":"ASSAULT", "desc":"Destroy the enemy company.", "rounds":0, "gold":100},
- {"name":"The Bell Tower", "kind":"DEFENSE", "desc":"Hold 5 rounds. Waves arrive in rounds 2 and 4.", "rounds":5, "gold":120},
+ {"name":"The Bell Tower", "kind":"DEFENSE", "desc":"Hold 5 turns. Waves arrive on turns 2 and 4.", "rounds":5, "gold":120},
  {"name":"The Frostbound Standard", "kind":"ASSAULT", "desc":"Defeat the frost marshal and his guard.", "rounds":0, "gold":135},
- {"name":"Embers of Winterwatch", "kind":"DEFENSE", "desc":"Survive 6 rounds against the winter host.", "rounds":6, "gold":155},
+ {"name":"Embers of Winterwatch", "kind":"DEFENSE", "desc":"Survive 6 turns against the winter host.", "rounds":6, "gold":155},
  {"name":"The Hollow Crown", "kind":"ASSAULT", "desc":"Slay the Hollow King and end the siege.", "rounds":0, "gold":200}
 ]
 const REWARDS = {
@@ -136,7 +136,7 @@ func reason(actor: String,card: String,target: String="") -> String:
  if h.is_empty() or h.hp<=0: return "Choose a living hero."
  if card not in cards(actor): return "Pack the required gear at the keep."
  if card in h.used: return "Already used this turn."
- if battle.commands<COMMANDS[card].cost: return "Not enough command points."
+ if battle.commands<COMMANDS[card].cost: return "Not enough orders. Choose a cheaper command or end the turn."
  if target=="": return ""
  if COMMANDS[card].target=="self": return ""
  var t=ally(target) if COMMANDS[card].target=="ally" else foe(target)
@@ -244,7 +244,7 @@ func resolve() -> bool:
  if mission.kind=="DEFENSE" and int(battle.round) in [2,4,6]:
   for lane in range(3): spawn(lane,false)
  plan()
- message="Round %d. Enemy intentions revealed; command points restored." % battle.round
+ message="Turn %d. Enemy intentions revealed; orders restored." % battle.round
  return true
 
 func before_enemy_turn():
@@ -288,7 +288,7 @@ func snapshot() -> Dictionary:
  return {"version":SAVE_VERSION,"campaign":campaign.duplicate(true),"battle":battle.duplicate(true)}
 
 func validate_save(data) -> String:
- if not data is Dictionary or data.get("version")!=SAVE_VERSION: return "Unrecognized Iron & Ember save."
+ if not data is Dictionary or not integer_in(data.get("version"),SAVE_VERSION,SAVE_VERSION): return "Unrecognized Iron & Ember save."
  var camp=super.validate_save({"version":1,"campaign":data.get("campaign"),"battle":{}})
  if camp!="": return camp
  var b=data.get("battle")
@@ -319,5 +319,5 @@ func validate_save(data) -> String:
   for key in ["hp","max_hp","power","lane"]:
    if not integer_in(e.get(key),0,2 if key=="lane" else 10000): return "Invalid enemy stats."
   if e.max_hp<1 or e.hp>e.max_hp or not e.get("stunned") is bool or not e.get("boss") is bool: return "Invalid enemy state."
-  if e.get("target")!="gate" and e.get("target") not in ids: return "Invalid enemy target."
+  if not e.get("target") is String or (e.target!="gate" and e.target not in ids): return "Invalid enemy target."
  return ""
