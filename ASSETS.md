@@ -1,13 +1,9 @@
 # Asset provenance
 
-<<<<<<< HEAD
-||||||| parent of 42693a2 (Checkpoint: The Last Crossing overhaul (uncommitted Codex work))
-=======
 ## The Last Crossing — October 3, 2026
 
 The selected authored-story world in `scripts/crossing_world.gd` is procedural project artwork: elevated terrain, river, open gate, family procession, camp, cart and mission landmarks. It reuses the unchanged Banner & Steel character atlas below. No external or newly generated media, font files or runtime dependencies were added. The earlier scenery remains for legacy companies. Source drawing-record compositions are diagnostic reconstructions, not native captures or published-build proof.
 
->>>>>>> 42693a2 (Checkpoint: The Last Crossing overhaul (uncommitted Codex work))
 ## Landing screenshots — October 2, 2026
 
 `site/images/battle-1440.png` and `site/images/chest-1440.png` are unchanged copies of the inspected, approved Banner & Steel native renderer captures at `/tmp/fleet-visual-20261002/war-chest/native/battle-1440.png` and `/tmp/fleet-visual-20261002/war-chest/native/chest-1440.png`. Both are 1440×900 PNGs from the e94dae4 visual audit; capture provenance and limitations are recorded in `/tmp/fleet-visual-20261002/war-chest/report.json`. Their reviewed SHA-256 digests are `ffd2d258227eb6e07ec87fc855f140d4ac1619d0f03aaf17288290b4bb3bd0fc` (battle) and `7f69677ac28486f6b6b936baa6ec5b2589c023381d713477a25381462cd9d3be` (chest); the landing validator checks these exact bytes. They replace the rejected Pocket Siege landing evidence for issue #3 without changing the landing design.
