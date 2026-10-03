@@ -97,7 +97,7 @@ func objective_text() -> String:
  var progress=""
  if o.id=="maneuver": progress=" (%d/3)" % o.moved.size()
  if o.id=="control": progress=" (%d/3)" % o.stunned.size()
- return "+%dg: %s%s" % [o.gold,OBJECTIVES[o.id],progress]
+ return "+%d gold: %s%s" % [o.gold,OBJECTIVES[o.id],progress]
 
 func damage_against(actor: String,card: String,enemy: Dictionary) -> int:
  var amount=super.damage_against(actor,card,enemy)

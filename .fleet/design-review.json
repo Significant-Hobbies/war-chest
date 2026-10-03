@@ -1,62 +1,114 @@
 {
-  "$schema": "fleet.design-review.v1",
-  "version": 1,
+  "$schema": "fleet.design-review.v2",
+  "version": 2,
   "project": "war-chest",
-  "target": "Selected Banner & Steel opening — implemented locally, native visual qualification pending",
+  "target": "Banner & Steel native quality and interaction fixes",
   "surfaceMode": "experience",
-  "mode": "overhaul",
+  "mode": "preserve",
   "register": "product",
   "context": {
     "product": "PRODUCT.md",
     "design": "DESIGN.md"
   },
   "direction": {
+    "source": "existing",
     "references": [],
-    "probes": [
-      {"id":"banner-steel","path":"artifacts/onboarding-directions/a-banner-steel.png"},
-      {"id":"field-orders","path":"artifacts/onboarding-directions/b-field-orders.png"},
-      {"id":"ink-ember","path":"artifacts/onboarding-directions/c-ink-ember.png"}
-    ],
+    "probes": [],
     "selected": "banner-steel",
-    "approval": "approved",
-    "before": "artifacts/motion-wide/heal-06.png",
+    "approval": "not-required",
+    "ownerEvidence": {
+      "path": "",
+      "quote": ""
+    },
+    "supplied": "",
+    "before": "artifacts/quality-2026-10-02/before-opening-1440x900.png",
     "library": {
       "strategy": "upstream-first",
-      "primary": "Godot native Control widgets",
+      "primary": "existing-project-system",
       "sources": [],
       "runtime": "existing",
       "customReplacement": {
         "used": false,
         "authorization": "not-required",
-        "reason": "Native Godot desktop game using existing Control widgets; web-library standard does not apply."
+        "reason": "Preserve existing Godot Control widgets and presentation. No new library or assets."
       }
     },
     "contract": {
       "purpose": "War Chest helps a strategy-game lover grow an enduring warband through tactical battles and spatial equipment builds.",
-      "purposeSource": "PRODUCT.md and owner conversation",
-      "canonicalPurpose": "No catalog contract exists for this new private project",
+      "purposeSource": "PRODUCT.md; ../saas-maker/catalog/projects.json directory.purposeContract",
+      "canonicalPurpose": "Explore a playable tactical war game with a persistent company and spatial equipment choices.",
       "purposeAlignment": "match",
       "driftNote": "",
-      "audience": "Sarthak, personal computer play, fully turn-based and without purchases",
-      "job": "Learn one meaningful combat decision, earn and pack equipment, experience its payoff in the next battle",
-      "thesis": "Simple mature 2D strategy, a world-first playable opening instead of a menu tour",
-      "system": "Owner selected A. Flat adult-proportioned illustration, compact serif titles, legible sans rules, olive/stone/navy with hostile brick and active ochre; square low-chrome controls and three explicit fronts.",
-      "signature": "The company banner and packed equipment connect the first defense to enduring company growth",
-      "risk": "Perspective and compact labels must remain readable in native play. UI uses actual attack power and target names; headless geometry checks are not native visual acceptance."
+      "audience": "Sarthak, personally testing an offline native desktop game.",
+      "job": "Command a defense, earn and pack equipment, understand its effect in the next battle, and retain company progress.",
+      "thesis": "Mature illustrated three-front tactics with readable threats and a playable earned-equipment introduction.",
+      "system": "Preserve approved Banner & Steel: flat adult-proportioned troops, limestone and olive world, Georgia titles and Avenir/Arial rules, warm paper native cards, ink text, brick hostile intent and ochre orders. Aspect-preserving 1440x900 canvas supports desktop windows 1152x720 and larger.",
+      "signature": "The company standard and spatial war chest connect a first gate defense to persistent company growth.",
+      "risk": "Compact intent and command labels must stay legible at the supported minimum; a failed save must never cover tactical controls. VoiceOver and frame pacing require separate qualification.",
+      "qualityBar": "Owner requested top quality. This pass must remove critical rule, save and interaction defects, inspect real native rendering and earned play, and report remaining fun, balance, accessibility and performance limits without treating tests as owner acceptance."
     }
   },
   "evidence": {
-    "screenshots": [],
+    "visualReview": {
+      "status": "pass",
+      "reviewer": "Independent presentation_review agent plus parent native CUA/input review",
+      "direction": "banner-steel",
+      "report": ".fleet/quality-review-2026-10-02.md",
+      "checks": {
+        "hierarchy": {
+          "status": "pass",
+          "observation": "Objective/turn/gate lead above three fronts and the command rail; enemy-turn results remain available until the next decision."
+        },
+        "typography": {
+          "status": "pass",
+          "observation": "Approved serif/sans pairing remains; larger HP/intent labels, gold prices and the compact saving-disabled footer fit at 1152x720."
+        },
+        "composition": {
+          "status": "pass",
+          "observation": "Final Move and save-warning fixtures leave destinations, commands and Undo unobscured; reviewed reward/equipment/quest/shop/manual screens retain coherent grouping."
+        },
+        "identity": {
+          "status": "pass",
+          "observation": "Owner-selected Banner & Steel keeps adult flat illustrated troops, olive company, limestone terrain, warm paper and brick hostile intent."
+        },
+        "interaction": {
+          "status": "pass",
+          "observation": "Native final-package mouse press, Menu/Esc, T/F target and Z Undo work; regression tests cover vanished focus controls, preserved failures, Move hover and warning recovery."
+        },
+        "responsive": {
+          "status": "pass",
+          "observation": "Actual native 1600x900 and 1152x900 windows preserve side/top bars; controls remain readable and actual mouse/T/F input works after resize to 1152x720. Desktop only; mobile unsupported."
+        }
+      }
+    },
+    "screenshots": [
+      {
+        "width": 1152,
+        "path": "artifacts/quality-2026-10-02/opening-1152x720.png"
+      },
+      {
+        "width": 1440,
+        "path": "artifacts/quality-2026-10-02/opening-1440x900.png"
+      },
+      {
+        "width": 1152,
+        "path": "artifacts/quality-2026-10-02/save-warning-1152x720.png"
+      },
+      {
+        "width": 1152,
+        "path": "artifacts/quality-2026-10-02/move-1152x720.png"
+      }
+    ],
     "projectCheck": {
-      "command": "sh scripts/check.sh; source and packaged suite details in .fleet/banner-steel-review.md",
-      "status": "fail"
+      "command": "sh scripts/check.sh; packaged Verify Local Game.command (8 suites); details in .fleet/quality-review-2026-10-02.md",
+      "status": "pass"
     },
     "critique": {
-      "score": null,
+      "score": 33,
       "maximum": 40
     },
     "audit": {
-      "score": null,
+      "score": 16,
       "maximum": 20
     },
     "unresolved": {
@@ -66,7 +118,7 @@
     "detector": {
       "posture": "advisory",
       "findings": [],
-      "note": "One advisory detector run returned zero findings; GDScript generic scanning is not native layout/accessibility assurance. Independent reviews and fixes recorded in .fleet/banner-steel-review.md. No current native screenshots or invented visual scores."
+      "note": "One advisory GDScript detector run returned zero findings. Native source, rendered fixtures and actual input are independent evidence; not an accessibility certificate."
     },
     "comprehension": {
       "status": "not-applicable",
@@ -89,10 +141,46 @@
         "total": 0
       },
       "mismatches": []
+    },
+    "nativeReview": {
+      "requestedWindowSizes": [
+        [
+          1152,
+          720
+        ],
+        [
+          1440,
+          900
+        ],
+        [
+          1600,
+          900
+        ],
+        [
+          1440,
+          1000
+        ]
+      ],
+      "actualFullWindowInspection": [
+        [
+          1600,
+          900
+        ],
+        [
+          1152,
+          900
+        ],
+        [
+          1152,
+          720
+        ]
+      ],
+      "fixtureCount": 52,
+      "note": "Wide/tall PNGs are viewport game canvases excluding letterboxes; actual full-window bars/input were separately observed using CUA. No 390/768 mobile support."
     }
   },
   "ownerFeedback": {
-    "decision": "keep",
-    "note": "Owner explicitly selected A after the refined Banner & Steel preview. Implement that approved direction; implementation quality and native validation remain separate gates."
+    "decision": "not-required",
+    "note": "Preserve the owner-selected Banner & Steel direction documented in DESIGN.md. No new direction was selected and this is not owner acceptance of final quality."
   }
 }

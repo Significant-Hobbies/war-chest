@@ -4,10 +4,12 @@ const FILES=[
  "project.godot","scenes/pocket.tscn",
  "scripts/game.gd","scripts/siege_game.gd","scripts/pocket_campaign.gd",
  "scripts/hero_campaign.gd","scripts/journey_game.gd","scripts/opening_game.gd","scripts/pocket_main.gd",
- "scripts/pocket_field.gd","scripts/pocket_art.gd","scripts/pocket_chest.gd",
- "scripts/pocket_motion.gd","scripts/pocket_coach.gd","scripts/pocket_unlock.gd",
+ "scripts/story_data.gd","scripts/story_game.gd","scripts/pocket_story.gd",
+ "scripts/pocket_field.gd","scripts/pocket_art.gd","scripts/pocket_chest.gd","scripts/crossing_world.gd",
+ "scripts/pocket_motion.gd","scripts/pocket_coach.gd","scripts/pocket_unlock.gd","scripts/command_preview.gd",
  "tests/test_journey.gd","tests/test_journey_ui.gd","tests/test_motion.gd","tests/test_onboarding.gd",
- "tests/test_opening.gd","tests/test_opening_boot.gd"
+ "tests/test_opening.gd","tests/test_opening_boot.gd","tests/test_stability.gd","tests/test_pocket_ui.gd",
+ "tests/test_story.gd","tests/test_story_campaign.gd","tests/test_story_ui.gd","tests/test_story_slots.gd","tests/test_command_preview.gd","tests/test_crossing_story.gd"
 ]
 const IMAGES=["company-atlas.png","lantern-gate.png"]
 

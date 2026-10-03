@@ -22,15 +22,44 @@ mkdir -p logs
 LOCAL_LOG_DIR=$(mktemp -d "$LOCAL_GAME_DIR/logs/session.XXXXXX")
 if [ "$LOCAL_MODE" = verify ]; then
   LOCAL_FAILURE=0
-  for LOCAL_SUITE in journey journey_ui onboarding motion opening; do
+  for LOCAL_SUITE in journey journey_ui onboarding motion opening opening_boot stability pocket_ui story story_campaign story_ui story_slots command_preview crossing_story; do
     LOCAL_LOG="$LOCAL_LOG_DIR/$LOCAL_SUITE.log"
+    case "$LOCAL_SUITE" in
+      journey) LOCAL_MARKER='^JOURNEY TESTS: [0-9]+ checks, 0 failures$' ;;
+      journey_ui) LOCAL_MARKER='^JOURNEY UI TESTS: [0-9]+ checks, 0 failures$' ;;
+      onboarding) LOCAL_MARKER='^ONBOARDING TESTS: [0-9]+ checks, 0 failures$' ;;
+      motion) LOCAL_MARKER='^MOTION TESTS: [0-9]+ checks, 0 failures$' ;;
+      opening) LOCAL_MARKER='^OPENING TESTS: [0-9]+ checks, 0 failures$' ;;
+      opening_boot) LOCAL_MARKER='^OPENING BOOT TESTS: [0-9]+ checks, 0 failures$' ;;
+      stability) LOCAL_MARKER='^STABILITY TESTS: [0-9]+ checks, 0 failures$' ;;
+      pocket_ui) LOCAL_MARKER='^POCKET UI TEST: 0 failures$' ;;
+      story) LOCAL_MARKER='^STORY TESTS: [0-9]+ checks, 0 failures$' ;;
+      story_campaign) LOCAL_MARKER='^STORY CAMPAIGN TESTS: [0-9]+ checks, 0 failures$' ;;
+      story_ui) LOCAL_MARKER='^STORY UI TESTS: [0-9]+ checks, 0 failures$' ;;
+      story_slots) LOCAL_MARKER='^STORY SLOT TESTS: [0-9]+ checks, 0 failures$' ;;
+      command_preview) LOCAL_MARKER='^COMMAND PREVIEW TESTS: [0-9]+ checks, 0 failures$' ;;
+      crossing_story) LOCAL_MARKER='^CROSSING STORY TESTS: [0-9]+ checks, 0 failures$' ;;
+    esac
+    # Preserve legacy demos; story presentation/slot callbacks need story isolation.
+    set -- --pocket-demo
+    if [ "$LOCAL_SUITE" = opening_boot ]; then set -- "$@" --banner-opening; fi
+    if [ "$LOCAL_SUITE" = story ]; then set -- "$@" "--story-test-storage=$LOCAL_LOG_DIR/story-fixtures"; fi
+    if [ "$LOCAL_SUITE" = story_ui ] || [ "$LOCAL_SUITE" = story_slots ] || [ "$LOCAL_SUITE" = crossing_story ]; then set -- --story-demo; fi
+    if [ "$LOCAL_SUITE" = story_slots ]; then set -- "$@" "--story-slot-test-storage=$LOCAL_LOG_DIR/story-slot-fixtures"; fi
     if ! "$LOCAL_ENGINE" --headless --main-pack "$LOCAL_PACK" --log-file "$LOCAL_LOG_DIR/$LOCAL_SUITE-engine.log" \
-      --script "res://tests/test_$LOCAL_SUITE.gd" -- --pocket-demo > "$LOCAL_LOG" 2>&1; then
+      --script "res://tests/test_$LOCAL_SUITE.gd" -- "$@" > "$LOCAL_LOG" 2>&1; then
+      echo "FAILED: packaged $LOCAL_SUITE exited unsuccessfully. Details: $LOCAL_LOG" >&2
       LOCAL_FAILURE=1
     fi
     cat "$LOCAL_LOG"
-    if ! grep -Eq 'TESTS: [0-9]+ checks, 0 failures' "$LOCAL_LOG"; then LOCAL_FAILURE=1; fi
-    if grep -Eq 'SCRIPT ERROR|ERROR:|FAIL:' "$LOCAL_LOG"; then LOCAL_FAILURE=1; fi
+    if ! grep -Eq "$LOCAL_MARKER" "$LOCAL_LOG"; then
+      echo "FAILED: packaged $LOCAL_SUITE did not report successful completion. Details: $LOCAL_LOG" >&2
+      LOCAL_FAILURE=1
+    fi
+    if grep -Eq 'SCRIPT ERROR|Parse Error|Compile Error|ERROR:|FAIL:' "$LOCAL_LOG"; then
+      echo "FAILED: packaged $LOCAL_SUITE reported an engine or test error. Details: $LOCAL_LOG" >&2
+      LOCAL_FAILURE=1
+    fi
   done
   echo "Verification logs: $LOCAL_LOG_DIR"
   if [ "$LOCAL_FAILURE" -ne 0 ]; then
@@ -43,7 +72,7 @@ fi
 echo "Session log: $LOCAL_LOG_DIR/game.log"
 if [ "$LOCAL_MODE" = practice ]; then
   echo "Practice: temporary progress only; existing saves and settings are untouched."
-  exec "$LOCAL_ENGINE" --main-pack "$LOCAL_PACK" --log-file "$LOCAL_LOG_DIR/game.log" -- --pocket-demo --banner-opening
+  exec "$LOCAL_ENGINE" --main-pack "$LOCAL_PACK" --log-file "$LOCAL_LOG_DIR/game.log" -- --story-demo
 fi
-echo "Campaign: uses your existing War Chest save and autosaves progress."
+echo "Campaign: resumes your story or original company and autosaves progress. A fresh company begins the story."
 exec "$LOCAL_ENGINE" --main-pack "$LOCAL_PACK" --log-file "$LOCAL_LOG_DIR/game.log"

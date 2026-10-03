@@ -1,6 +1,9 @@
 extends RefCounted
 ## Presentation-only timeline. Owns copied positions/results, never game state.
 const LENGTH=0.68
+const CROSSING_ENEMIES=[Vector2(340,300),Vector2(675,335),Vector2(1010,370)]
+const CROSSING_COMPANY=[Vector2(440,460),Vector2(775,500),Vector2(1110,540)]
+const CROSSING_CART=[Vector2(194,467),Vector2(535,514),Vector2(1299,440)]
 var age=0.0
 var tracks={}
 var effects=[]
@@ -15,9 +18,20 @@ static func point(unit: Dictionary,enemy: bool,state: Dictionary) -> Vector2:
  for other in state.get("enemies" if enemy else "heroes",[]):
   if other.id==unit.id: break
   if other.hp>0 and other.lane==unit.lane: slot+=1
+ if state.has("story"):
+  var center: Vector2=(CROSSING_ENEMIES if enemy else CROSSING_COMPANY)[int(unit.lane)]
+  return center+Vector2(1,0.12)*(slot-(count-1)/2.0)*108
  var center=[350.0,720.0,1090.0][int(unit.lane)]
  var x=center+(slot-(count-1)/2.0)*116
  return Vector2(x,310 if enemy else 531)
+
+## The same physical objective is used by world props, threats and impacts.
+static func gate_point(state: Dictionary) -> Vector2:
+ if not state.has("story"): return Vector2(720,174)
+ if state.story.get("node","")=="convoy":
+  var stage=mini(int(state.get("quest",{}).get("progress",0)),3)
+  return CROSSING_CART[[0,1,2,0][stage]]
+ return Vector2(1135,360)
 
 func clear():
  tracks.clear();effects.clear();lunges.clear();age=0.0;summary=""
@@ -52,6 +66,8 @@ func build(before: Dictionary,after: Dictionary,actor="",card="",resolved=false)
     var compression=old[u.id].unit.lane==u.lane and point(old[u.id].unit,enemy,before)!=fresh[u.id].point and card!="move"
     tracks[u.id]={"from":old[u.id].point,"to":fresh[u.id].point,"delay":impact_time+0.18 if compression else 0.0}
    else: add("arrival",fresh[u.id].point)
+ if before.get("story",{}).get("node","")=="convoy" and gate_point(before)!=gate_point(after):
+  tracks["_objective"]={"from":visible.get("_objective",gate_point(before)),"to":gate_point(after),"delay":impact_time+0.18}
  var struck=[]
  for id in old:
   if not fresh.has(id): continue
@@ -89,7 +105,7 @@ func build(before: Dictionary,after: Dictionary,actor="",card="",resolved=false)
    if e.hp<=0: continue
    var start=point(e,true,before)
    if e.stunned: add("skip",start,"Skipped",Color("203340"));continue
-   var destination=Vector2(720,174) if e.target=="gate" else old.get(e.target,{}).get("point",start)
+   var destination=gate_point(before) if e.target=="gate" else old.get(e.target,{}).get("point",start)
    if e.target!="gate" and not old.has(e.target): continue
    if remaining.has(e.target):
     var h=remaining[e.target]
@@ -101,8 +117,9 @@ func build(before: Dictionary,after: Dictionary,actor="",card="",resolved=false)
    add("enemy",destination,"",Color("9d4133"),{"from":start,"delay":minf(i*0.025,0.15)})
    lunges[e.id]=(destination-start).normalized()*12;i+=1
   if after.gate<before.gate:
-   add("damage",Vector2(720,174),"Gate −%d" % (before.gate-after.gate),Color("c3423f"),{"delay":impact_time})
-   outcomes.append("Gate −%d" % (before.gate-after.gate))
+   var defense="Cart" if before.get("story",{}).get("node","")=="convoy" else "Gate"
+   add("damage",gate_point(before),"%s −%d" % [defense,before.gate-after.gate],Color("c3423f"),{"delay":impact_time})
+   outcomes.append("%s −%d" % [defense,before.gate-after.gate])
   for id in absorbed:
    if absorbed[id]>0:
     add("shield",old[id].point,"Blocked %d" % absorbed[id],Color("405947"),{"delay":impact_time})
